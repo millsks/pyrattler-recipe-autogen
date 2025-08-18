@@ -132,7 +132,7 @@ def resolve_dynamic_version(project_root: pathlib.Path, toml: dict) -> str:
         try:
             import setuptools_scm
 
-            return setuptools_scm.get_version(root=project_root)
+            return _t.cast(str, setuptools_scm.get_version(root=project_root))
         except ImportError:
             _warn("setuptools_scm not available, trying command line")
             try:
