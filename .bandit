@@ -1,0 +1,7 @@
+skips:
+  - B404  # import subprocess - We need subprocess for version detection
+  - B603  # subprocess without shell=True - Our subprocess calls are safe (no shell=True, controlled arguments)
+  - B607  # partial executable path - Poetry executable is expected to be in PATH
+
+exclude_dirs:
+  - tests
