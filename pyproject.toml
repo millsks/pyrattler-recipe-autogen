@@ -168,11 +168,11 @@ clean = "python -c 'import shutil, pathlib; [shutil.rmtree(p, ignore_errors=True
 build = { cmd = "python -m build", depends-on = ["clean"] }
 
 # Pre-commit
-pre-commit-install = "pre-commit install"
+pre-commit-install = "pre-commit install && pre-commit install --hook-type commit-msg"
 pre-commit-run = "pre-commit run --all-files"
 
 # Development workflow
-dev-setup = "pre-commit install"
+dev-setup = { depends-on = ["pre-commit-install"] }
 
 [tool.pixi.feature.test.tasks]
 test = "pytest tests/"
