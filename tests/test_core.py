@@ -52,18 +52,29 @@ version = "0.1.0"
 description = "Test package"
 """
 
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
-        f.write(toml_content)
-        f.flush()
+    # Use mkstemp for better cross-platform compatibility
+    import os
 
-        toml_path = pathlib.Path(f.name)
+    fd, temp_path = tempfile.mkstemp(suffix=".toml", text=True)
+    toml_path = pathlib.Path(temp_path)
 
+    try:
+        # Write content and close file descriptor
+        with os.fdopen(fd, "w") as f:
+            f.write(toml_content)
+
+        # Now load and test
+        data = load_pyproject_toml(toml_path)
+        assert data["project"]["name"] == "test-package"
+        assert data["project"]["version"] == "0.1.0"
+    finally:
+        # Clean up the temporary file
         try:
-            data = load_pyproject_toml(toml_path)
-            assert data["project"]["name"] == "test-package"
-            assert data["project"]["version"] == "0.1.0"
-        finally:
             toml_path.unlink()
+        except (OSError, PermissionError):
+            # On Windows, sometimes the file is still locked
+            # This is acceptable for a test cleanup
+            pass
 
 
 def test_build_context_section():
