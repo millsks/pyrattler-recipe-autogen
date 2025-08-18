@@ -567,16 +567,16 @@ def test_resolve_dynamic_version_poetry():
         assert result == "3.0.0"
 
 
-def test_resolve_dynamic_version_fallback_setuptools():
-    """Test dynamic version resolution fallback to setuptools."""
+def test_resolve_dynamic_version_unknown_backend(capsys):
+    """Test dynamic version resolution with unknown backend falls back to placeholder."""
     toml_data = {"build-system": {"build-backend": "unknown.backend"}}
 
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value.stdout = "4.0.0\n"
-        mock_run.return_value.returncode = 0
+    result = resolve_dynamic_version(pathlib.Path("."), toml_data)
+    assert result == "${{ env.get('PYPROJECT_VERSION', default='0.1.0') }}"
 
-        result = resolve_dynamic_version(pathlib.Path("."), toml_data)
-        assert result == "4.0.0"
+    # Should emit warning about using placeholder
+    captured = capsys.readouterr()
+    assert "Could not resolve dynamic version" in captured.err
 
 
 def test_resolve_dynamic_version_all_fail(capsys):

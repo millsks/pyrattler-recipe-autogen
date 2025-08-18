@@ -186,23 +186,6 @@ def resolve_dynamic_version(project_root: pathlib.Path, toml: dict) -> str:
         except (subprocess.CalledProcessError, FileNotFoundError):
             pass
 
-    # Fallback: try to build and extract version
-    try:
-        result = subprocess.run(
-            [
-                sys.executable,
-                "-c",
-                "import setuptools; print(setuptools.setup().get_version())",
-            ],
-            cwd=project_root,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        return result.stdout.strip()
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        pass
-
     # Last resort: use environment variable placeholder
     _warn("Could not resolve dynamic version, using environment variable placeholder")
     return "${{ env.get('PYPROJECT_VERSION', default='0.1.0') }}"
