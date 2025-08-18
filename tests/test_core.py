@@ -503,11 +503,18 @@ def test_resolve_dynamic_version_setuptools_scm():
     """Test dynamic version resolution with setuptools_scm."""
     toml_data = {"build-system": {"build-backend": "setuptools_scm.build_meta"}}
 
-    # Mock the module-level setuptools_scm variable
+    # Mock the setuptools_scm import within the function
     mock_scm = MagicMock()
     mock_scm.get_version.return_value = "1.2.3dev"
 
-    with patch("pyrattler_recipe_autogen.core.setuptools_scm", mock_scm):
+    with patch("builtins.__import__") as mock_import:
+
+        def side_effect(name, *args, **kwargs):
+            if name == "setuptools_scm":
+                return mock_scm
+            return __import__(name, *args, **kwargs)
+
+        mock_import.side_effect = side_effect
         result = resolve_dynamic_version(pathlib.Path("."), toml_data)
         assert result == "1.2.3dev"
 
@@ -516,14 +523,20 @@ def test_resolve_dynamic_version_setuptools_scm_subprocess():
     """Test dynamic version resolution with setuptools_scm via subprocess."""
     toml_data = {"tool": {"setuptools_scm": {}}}
 
-    # Mock setuptools_scm as None to simulate import failure
-    with patch("pyrattler_recipe_autogen.core.setuptools_scm", None):
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value.stdout = "1.2.3\n"
-            mock_run.return_value.returncode = 0
+    # Mock setuptools_scm import to fail and trigger subprocess fallback
+    with patch("builtins.__import__") as mock_import:
 
+        def side_effect(name, *args, **kwargs):
+            if name == "setuptools_scm":
+                raise ImportError("setuptools_scm not available")
+            return __import__(name, *args, **kwargs)
+
+        mock_import.side_effect = side_effect
+
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(stdout="4.5.6", returncode=0)
             result = resolve_dynamic_version(pathlib.Path("."), toml_data)
-            assert result == "1.2.3"
+            assert result == "4.5.6"
 
 
 def test_resolve_dynamic_version_setuptools_scm_exception():
@@ -534,7 +547,15 @@ def test_resolve_dynamic_version_setuptools_scm_exception():
     mock_scm = MagicMock()
     mock_scm.get_version.side_effect = Exception("Version resolution failed")
 
-    with patch("pyrattler_recipe_autogen.core.setuptools_scm", mock_scm):
+    with patch("builtins.__import__") as mock_import:
+
+        def side_effect(name, *args, **kwargs):
+            if name == "setuptools_scm":
+                return mock_scm
+            return __import__(name, *args, **kwargs)
+
+        mock_import.side_effect = side_effect
+
         with patch("subprocess.run") as mock_run:
             mock_run.return_value.stdout = "1.2.3\n"
             mock_run.return_value.returncode = 0

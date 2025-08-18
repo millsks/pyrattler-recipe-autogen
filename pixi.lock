@@ -3259,7 +3259,7 @@ packages:
   timestamp: 1733710122949
 - pypi: ./
   name: pyrattler-recipe-autogen
-  version: 0.1.dev7+g90b6ae050.d20250818
+  version: 0.1.dev32+g67b64e3dc.d20250818
   sha256: 91a998f3ca1dabf825ee69e58e8fff38522dac49554628313ea1a7de02e515de
   requires_dist:
   - pyyaml

@@ -1,10 +1,27 @@
 """
-Core business logic for generating Rattler-Build recipe.yaml from pyproject.toml
+from __future__ import annotations
 
-• Pulls canonical project data from `[project]`
-• Handles dynamic version resolution from build backends
-• If `[tool.pixi]` exists, uses Pixi tables for requirement mapping
-• Reads extra/override keys from `[tool.conda.recipe.*]`
+import logging
+import os
+import shutil
+import subprocess
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Optional, Union
+
+import tomli
+
+logger = logging.getLogger(__name__)
+
+# ----
+# Core business logic for generating Rattler-Build recipe.yaml from pyproject.toml
+#
+# • Pulls canonical project data from `[project]`
+# • Handles dynamic version resolution from build backends
+# • If `[tool.pixi]` exists, uses Pixi tables for requirement mapping
+# • Reads extra/override keys from `[tool.conda.recipe.*]`
+# ----
+
+# Optional setuptools_scm import handled within function
 """
 
 from __future__ import annotations
@@ -21,10 +38,7 @@ try:
 except ModuleNotFoundError:  # pragma: no cover
     import tomli as tomllib
 
-try:
-    import setuptools_scm
-except ImportError:
-    setuptools_scm = None
+# Note: setuptools_scm import handled locally in resolve_dynamic_version()
 
 import yaml
 
@@ -138,9 +152,18 @@ def resolve_dynamic_version(project_root: pathlib.Path, toml: dict) -> str:
         or "tool" in toml
         and "setuptools_scm" in toml["tool"]
     ):
-        if setuptools_scm is not None:
+        # Try to import setuptools_scm locally
+        _setuptools_scm = None
+        try:
+            import setuptools_scm  # noqa: F401 # local import
+
+            _setuptools_scm = setuptools_scm
+        except ImportError:
+            pass
+
+        if _setuptools_scm is not None:
             try:
-                return str(setuptools_scm.get_version(root=project_root))
+                return str(_setuptools_scm.get_version(root=project_root))
             except (OSError, ValueError, RuntimeError, ImportError) as e:
                 # Fall through to subprocess approach if setuptools_scm fails
                 _warn(f"setuptools_scm direct call failed: {e}")
