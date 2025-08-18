@@ -1,0 +1,185 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pyrattler-recipe-autogen"
+dynamic = ["version"]
+description = "Generate Rattler-Build recipe.yaml from pyproject.toml"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+    {name = "millsks"}
+]
+requires-python = ">=3.9"
+dependencies = [
+    "pyyaml",
+    "tomli; python_version < '3.11'",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: System :: Software Distribution",
+]
+
+[project.scripts]
+pyrattler-recipe-autogen = "pyrattler_recipe_autogen.cli:main"
+
+[project.urls]
+homepage = "https://github.com/millsks/pyrattler-recipe-autogen"
+repository = "https://github.com/millsks/pyrattler-recipe-autogen.git"
+documentation = "https://github.com/millsks/pyrattler-recipe-autogen.git#README"
+issues = "https://github.com/millsks/pyrattler-recipe-autogen/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pyrattler_recipe_autogen"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/README.md",
+    "/LICENSE",
+]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/pyrattler_recipe_autogen/_version.py"
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "N",   # pep8-naming
+]
+ignore = [
+    "E501",  # line too long, handled by formatter
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["pyrattler_recipe_autogen"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = ["setuptools_scm", "tomli"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=pyrattler_recipe_autogen",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+]
+
+[tool.pixi.project]
+name = "pyrattler-recipe-autogen"
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "osx-64", "linux-64", "win-64"]
+
+[tool.pixi.pypi-dependencies]
+pyrattler-recipe-autogen = { path = ".", editable = true }
+
+[tool.pixi.host-dependencies]
+python = ">=3.9,<4.0"
+pip = "*"
+python-build = "*"
+hatchling = "*"
+hatch-vcs = "*"
+
+[tool.pixi.feature.dev.dependencies]
+pytest = "*"
+pytest-cov = "*"
+ruff = "*"
+mypy = "*"
+pre-commit = "*"
+twine = "*"
+safety = "*"
+bandit = "*"
+
+[tool.pixi.feature.test.dependencies]
+pytest = "*"
+pytest-cov = "*"
+
+[tool.pixi.feature.lint.dependencies]
+ruff = "*"
+mypy = "*"
+
+[tool.pixi.environments]
+default = { features = ["dev"], solve-group = "default" }
+test = { features = ["test"], solve-group = "default" }
+lint = { features = ["lint"], solve-group = "default" }
+
+[tool.pixi.tasks]
+# Main CLI command for testing
+generate-recipe = "python -m pyrattler_recipe_autogen.cli"
+
+# Version management
+version = "python -c 'import pyrattler_recipe_autogen; print(pyrattler_recipe_autogen.__version__)'"
+
+# Building
+clean = "python -c 'import shutil, pathlib; [shutil.rmtree(p, ignore_errors=True) for p in [pathlib.Path(\"build\"), pathlib.Path(\"dist\")] + list(pathlib.Path(\".\").glob(\"*.egg-info\"))]'"
+build = { cmd = "python -m build", depends-on = ["clean"] }
+
+# Pre-commit
+pre-commit-install = "pre-commit install"
+pre-commit-run = "pre-commit run --all-files"
+
+# Development workflow
+dev-setup = "pre-commit install"
+
+[tool.pixi.feature.test.tasks]
+test = "pytest tests/"
+test-cov = "pytest --cov=pyrattler_recipe_autogen --cov-report=term-missing --cov-report=html --cov-report=xml --cov-report=json --cov-report=lcov tests/"
+
+[tool.pixi.feature.lint.tasks]
+format = "ruff format src/ tests/ && ruff check --fix src/ tests/"
+lint = "ruff check src/ tests/"
+typecheck = "mypy src/pyrattler_recipe_autogen/"
+check = { depends-on = ["lint", "typecheck"] }
+
+[tool.pixi.feature.dev.tasks]
+ci = { depends-on = ["format", "check", "test-cov"] }
