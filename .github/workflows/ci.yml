@@ -109,7 +109,7 @@ jobs:
 
       - name: Check package integrity
         run: |
-          pixi run -e lint twine check dist/*
+          pixi run twine check dist/*
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4.6.2

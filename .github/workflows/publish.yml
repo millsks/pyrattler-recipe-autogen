@@ -62,7 +62,7 @@ jobs:
 
       - name: Check package
         run: |
-          pixi run -e lint twine check dist/*
+          pixi run twine check dist/*
 
       - name: Publish to Test PyPI
         if: github.event_name == 'workflow_dispatch'
