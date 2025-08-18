@@ -21,6 +21,11 @@ try:
 except ModuleNotFoundError:  # pragma: no cover
     import tomli as tomllib
 
+try:
+    import setuptools_scm
+except ImportError:
+    setuptools_scm = None
+
 import yaml
 
 # ----
@@ -129,23 +134,29 @@ def resolve_dynamic_version(project_root: pathlib.Path, toml: dict) -> str:
         or "tool" in toml
         and "setuptools_scm" in toml["tool"]
     ):
-        try:
-            import setuptools_scm
-
-            return str(setuptools_scm.get_version(root=project_root))
-        except ImportError:
-            _warn("setuptools_scm not available, trying command line")
+        if setuptools_scm is not None:
             try:
-                result = subprocess.run(
-                    [sys.executable, "-m", "setuptools_scm"],
-                    cwd=project_root,
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                )
-                return result.stdout.strip()
-            except (subprocess.CalledProcessError, FileNotFoundError):
-                pass
+                return str(setuptools_scm.get_version(root=project_root))
+            except (OSError, ValueError, RuntimeError, ImportError) as e:
+                # Fall through to subprocess approach if setuptools_scm fails
+                _warn(f"setuptools_scm direct call failed: {e}")
+            except Exception as e:
+                # Catch any other unexpected exceptions and log them
+                _warn(f"Unexpected error with setuptools_scm: {e}")
+
+        # Try setuptools_scm via subprocess if direct import failed or not available
+        _warn("setuptools_scm not available, trying command line")
+        try:
+            result = subprocess.run(
+                [sys.executable, "-m", "setuptools_scm"],
+                cwd=project_root,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            return result.stdout.strip()
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            pass
 
     # Try hatchling
     if "hatchling" in build_backend or "hatch" in build_backend:

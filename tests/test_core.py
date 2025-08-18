@@ -503,11 +503,11 @@ def test_resolve_dynamic_version_setuptools_scm():
     """Test dynamic version resolution with setuptools_scm."""
     toml_data = {"build-system": {"build-backend": "setuptools_scm.build_meta"}}
 
-    # Mock setuptools_scm as a module
+    # Mock the module-level setuptools_scm variable
     mock_scm = MagicMock()
     mock_scm.get_version.return_value = "1.2.3dev"
 
-    with patch.dict("sys.modules", {"setuptools_scm": mock_scm}):
+    with patch("pyrattler_recipe_autogen.core.setuptools_scm", mock_scm):
         result = resolve_dynamic_version(pathlib.Path("."), toml_data)
         assert result == "1.2.3dev"
 
@@ -516,8 +516,25 @@ def test_resolve_dynamic_version_setuptools_scm_subprocess():
     """Test dynamic version resolution with setuptools_scm via subprocess."""
     toml_data = {"tool": {"setuptools_scm": {}}}
 
-    # Mock setuptools_scm import failure, then successful subprocess
-    with patch.dict("sys.modules", {"setuptools_scm": None}):
+    # Mock setuptools_scm as None to simulate import failure
+    with patch("pyrattler_recipe_autogen.core.setuptools_scm", None):
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value.stdout = "1.2.3\n"
+            mock_run.return_value.returncode = 0
+
+            result = resolve_dynamic_version(pathlib.Path("."), toml_data)
+            assert result == "1.2.3"
+
+
+def test_resolve_dynamic_version_setuptools_scm_exception():
+    """Test dynamic version resolution when setuptools_scm raises an exception."""
+    toml_data = {"build-system": {"build-backend": "setuptools_scm.build_meta"}}
+
+    # Mock setuptools_scm to raise an exception
+    mock_scm = MagicMock()
+    mock_scm.get_version.side_effect = Exception("Version resolution failed")
+
+    with patch("pyrattler_recipe_autogen.core.setuptools_scm", mock_scm):
         with patch("subprocess.run") as mock_run:
             mock_run.return_value.stdout = "1.2.3\n"
             mock_run.return_value.returncode = 0
