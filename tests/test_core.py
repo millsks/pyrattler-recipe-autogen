@@ -2,20 +2,22 @@
 Tests for pyrattler_recipe_autogen package.
 """
 
-import tempfile
 import pathlib
-from unittest.mock import patch
-import pytest
 
 # Add src to path for testing
 import sys
+import tempfile
+from unittest.mock import patch
+
+import pytest
+
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent / "src"))
 
 from pyrattler_recipe_autogen.core import (
-    load_pyproject_toml,
-    generate_recipe,
-    build_context_section,
     _normalize_deps,
+    build_context_section,
+    generate_recipe,
+    load_pyproject_toml,
 )
 
 
@@ -49,13 +51,13 @@ name = "test-package"
 version = "0.1.0"
 description = "Test package"
 """
-    
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.toml', delete=False) as f:
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
         f.write(toml_content)
         f.flush()
-        
+
         toml_path = pathlib.Path(f.name)
-        
+
         try:
             data = load_pyproject_toml(toml_path)
             assert data["project"]["name"] == "test-package"
@@ -70,20 +72,20 @@ def test_build_context_section():
         "project": {
             "name": "Test Package",
             "version": "1.2.3",
-            "requires-python": ">=3.8,<4.0"
+            "requires-python": ">=3.8,<4.0",
         }
     }
-    
+
     context = build_context_section(toml_data, pathlib.Path("."))
-    
+
     assert context["name"] == "test-package"  # lowercase and hyphenated
     assert context["version"] == "1.2.3"
     assert context["python_min"] == "3.8"
     assert context["python_max"] == "4.0"
 
 
-@patch('pyrattler_recipe_autogen.core.write_recipe_yaml')
-@patch('pyrattler_recipe_autogen.core.load_pyproject_toml')
+@patch("pyrattler_recipe_autogen.core.write_recipe_yaml")
+@patch("pyrattler_recipe_autogen.core.load_pyproject_toml")
 def test_generate_recipe(mock_load, mock_write):
     """Test the main generate_recipe function."""
     # Mock the TOML loading
@@ -92,16 +94,16 @@ def test_generate_recipe(mock_load, mock_write):
             "name": "test-package",
             "version": "0.1.0",
             "description": "Test package",
-            "dependencies": ["pyyaml"]
+            "dependencies": ["pyyaml"],
         }
     }
     mock_load.return_value = mock_toml_data
-    
+
     # Call the function
     pyproject_path = pathlib.Path("pyproject.toml")
     output_path = pathlib.Path("recipe.yaml")
     generate_recipe(pyproject_path, output_path)
-    
+
     # Verify the calls
     mock_load.assert_called_once_with(pyproject_path)
     mock_write.assert_called_once()

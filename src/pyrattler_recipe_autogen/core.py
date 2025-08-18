@@ -8,24 +8,25 @@ Core business logic for generating Rattler-Build recipe.yaml from pyproject.toml
 """
 
 from __future__ import annotations
+
+import os
 import pathlib
+import re
+import subprocess
 import sys
 import typing as _t
-import subprocess
-import os
-import re
 
 try:
     import tomllib  # Python ≥3.11
-except ModuleNotFoundError:    # pragma: no cover
-    import tomli as tomllib    # type: ignore
+except ModuleNotFoundError:  # pragma: no cover
+    import tomli as tomllib  # type: ignore
 
 import yaml
-
 
 # ----
 # Utilities
 # ----
+
 
 def _toml_get(d: dict, dotted_key: str, default: _t.Any = None) -> _t.Any:
     """Nested lookup with `.` notation."""
@@ -47,20 +48,22 @@ def _merge_dict(base: dict, extra: dict | None) -> dict:
     return base
 
 
-def _get_relative_path(file_path: str | pathlib.Path, recipe_dir: str | pathlib.Path) -> str:
+def _get_relative_path(
+    file_path: str | pathlib.Path, recipe_dir: str | pathlib.Path
+) -> str:
     """
     Get relative path from recipe_dir to file_path, using '../' as needed.
-    
+
     Args:
         file_path: Path to the file
         recipe_dir: Path to the recipe directory
-    
+
     Returns:
         Relative path string from recipe_dir to file_path
     """
     file_path = pathlib.Path(file_path).resolve()
     recipe_dir = pathlib.Path(recipe_dir).resolve()
-    
+
     try:
         # Try direct relative_to first (for files within recipe_dir)
         return str(file_path.relative_to(recipe_dir))
@@ -69,17 +72,17 @@ def _get_relative_path(file_path: str | pathlib.Path, recipe_dir: str | pathlib.
         try:
             # Find common path and build relative path with ../
             common = pathlib.Path(os.path.commonpath([file_path, recipe_dir]))
-            
+
             # Get path from recipe_dir back to common ancestor
             recipe_to_common = recipe_dir.relative_to(common)
-            
+
             # Get path from common ancestor to file
             common_to_file = file_path.relative_to(common)
-            
+
             # Build relative path: go up from recipe_dir to common, then down to file
-            up_dirs = ['..'] * len(recipe_to_common.parts)
+            up_dirs = [".."] * len(recipe_to_common.parts)
             relative_path = pathlib.Path(*up_dirs) / common_to_file
-            
+
             return str(relative_path)
         except (ValueError, OSError):
             # Fallback: return absolute path if all else fails
@@ -111,6 +114,7 @@ def _normalize_deps(deps: _t.Any) -> list[str]:
 # Version Resolution
 # ----
 
+
 def resolve_dynamic_version(project_root: pathlib.Path, toml: dict) -> str:
     """
     Attempt to resolve dynamic version from the build backend.
@@ -118,11 +122,16 @@ def resolve_dynamic_version(project_root: pathlib.Path, toml: dict) -> str:
     """
     build_system = toml.get("build-system", {})
     build_backend = build_system.get("build-backend", "")
-    
+
     # Try setuptools_scm first (most common)
-    if "setuptools_scm" in build_backend or "tool" in toml and "setuptools_scm" in toml["tool"]:
+    if (
+        "setuptools_scm" in build_backend
+        or "tool" in toml
+        and "setuptools_scm" in toml["tool"]
+    ):
         try:
             import setuptools_scm
+
             return setuptools_scm.get_version(root=project_root)
         except ImportError:
             _warn("setuptools_scm not available, trying command line")
@@ -132,12 +141,12 @@ def resolve_dynamic_version(project_root: pathlib.Path, toml: dict) -> str:
                     cwd=project_root,
                     capture_output=True,
                     text=True,
-                    check=True
+                    check=True,
                 )
                 return result.stdout.strip()
             except (subprocess.CalledProcessError, FileNotFoundError):
                 pass
-    
+
     # Try hatchling
     if "hatchling" in build_backend or "hatch" in build_backend:
         try:
@@ -146,12 +155,12 @@ def resolve_dynamic_version(project_root: pathlib.Path, toml: dict) -> str:
                 cwd=project_root,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
             )
             return result.stdout.strip()
         except (subprocess.CalledProcessError, FileNotFoundError):
             pass
-    
+
     # Try poetry
     if "poetry" in build_backend:
         try:
@@ -160,25 +169,29 @@ def resolve_dynamic_version(project_root: pathlib.Path, toml: dict) -> str:
                 cwd=project_root,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
             )
             return result.stdout.strip()
         except (subprocess.CalledProcessError, FileNotFoundError):
             pass
-    
+
     # Fallback: try to build and extract version
     try:
         result = subprocess.run(
-            [sys.executable, "-c", "import setuptools; print(setuptools.setup().get_version())"],
+            [
+                sys.executable,
+                "-c",
+                "import setuptools; print(setuptools.setup().get_version())",
+            ],
             cwd=project_root,
             capture_output=True,
             text=True,
-            check=True
+            check=True,
         )
         return result.stdout.strip()
     except (subprocess.CalledProcessError, FileNotFoundError):
         pass
-    
+
     # Last resort: use environment variable placeholder
     _warn("Could not resolve dynamic version, using environment variable placeholder")
     return "${{ env.get('PYPROJECT_VERSION', default='0.1.0') }}"
@@ -188,10 +201,11 @@ def resolve_dynamic_version(project_root: pathlib.Path, toml: dict) -> str:
 # Section Builders
 # ----
 
+
 def build_context_section(toml: dict, project_root: pathlib.Path) -> dict:
     """Build the context section of the recipe."""
     project = toml["project"]
-    
+
     # Handle dynamic version
     dynamic_fields = project.get("dynamic", [])
     if "version" in dynamic_fields:
@@ -201,8 +215,10 @@ def build_context_section(toml: dict, project_root: pathlib.Path) -> dict:
     else:
         version = project.get("version")
         if not version:
-            raise ValueError("Version not found in project table and not marked as dynamic")
-    
+            raise ValueError(
+                "Version not found in project table and not marked as dynamic"
+            )
+
     # Extract python_min and python_max from requires-python
     requires_python = project.get("requires-python", "")
     python_min = ""
@@ -211,31 +227,31 @@ def build_context_section(toml: dict, project_root: pathlib.Path) -> dict:
         # Remove common range modifiers to get the base version
         # Handle cases like ">=3.12", "~=3.12.0", ">=3.12,<4.0", ">=3.8,<3.13", etc.
         # Extract the first version number after >= or ~=
-        min_match = re.search(r'[>~]=?\s*([0-9]+(?:\.[0-9]+)*)', requires_python)
+        min_match = re.search(r"[>~]=?\s*([0-9]+(?:\.[0-9]+)*)", requires_python)
         if min_match:
             python_min = min_match.group(1)
-        
+
         # Extract the maximum version number after <
-        max_match = re.search(r'<\s*([0-9]+(?:\.[0-9]+)*)', requires_python)
+        max_match = re.search(r"<\s*([0-9]+(?:\.[0-9]+)*)", requires_python)
         if max_match:
             python_max = max_match.group(1)
-    
+
     # Start with standard context
     context = {
         "name": project["name"].lower().replace(" ", "-"),
         "version": version,
         "python_min": python_min,
     }
-    
+
     # Only add python_max if it has a valid value
     if python_max:
         context["python_max"] = python_max
-    
+
     # Merge in extra context from tool.conda.recipe.extra_context
     # This will override python_min if explicitly provided
     extra_context = _toml_get(toml, "tool.conda.recipe.extra_context", {})
     context.update(extra_context)
-    
+
     return context
 
 
@@ -276,9 +292,15 @@ def build_about_section(toml: dict, recipe_dir: pathlib.Path) -> dict:
                             license_value = "Apache-2.0"
                         elif "bsd license" in content:
                             license_value = "BSD-3-Clause"
-                        elif "gnu general public license" in content and "version 3" in content:
+                        elif (
+                            "gnu general public license" in content
+                            and "version 3" in content
+                        ):
                             license_value = "GPL-3.0"
-                        elif "gnu general public license" in content and "version 2" in content:
+                        elif (
+                            "gnu general public license" in content
+                            and "version 2" in content
+                        ):
                             license_value = "GPL-2.0"
                         # Add more license detection as needed
                 except (OSError, UnicodeDecodeError):
@@ -296,14 +318,14 @@ def build_about_section(toml: dict, recipe_dir: pathlib.Path) -> dict:
             license_file = [license_files]
 
     # For conda recipes with source path, license files should be relative to source directory
-    # not the recipe directory. Since most conda recipes use source: path: .., the license 
+    # not the recipe directory. Since most conda recipes use source: path: .., the license
     # file should just be the filename without any relative path prefix
     if license_file:
         if isinstance(license_file, list):
             # Remove any directory prefixes for conda source builds
             license_file = [pathlib.Path(f).name for f in license_file]
         else:
-            # Remove any directory prefixes for conda source builds  
+            # Remove any directory prefixes for conda source builds
             license_file = pathlib.Path(license_file).name
 
     std_about = {
@@ -334,16 +356,16 @@ def build_build_section(toml: dict) -> dict:
     """Build the build section of the recipe."""
     # Get configuration from tool.conda.recipe.build
     section = _toml_get(toml, "tool.conda.recipe.build", {})
-    
+
     # Apply defaults for missing fields
     if "script" not in section:
         section["script"] = "$PYTHON -m pip install . -vv --no-build-isolation"
-    
+
     if "number" not in section:
         section["number"] = 0
-    
+
     # Note: string fields are left out if missing (no default applied)
-    
+
     return section
 
 
@@ -352,7 +374,7 @@ def build_requirements_section(toml: dict, context: dict) -> dict:
     # Get python_min and python_max from context for consistent python version handling
     python_min = context.get("python_min", "")
     python_max = context.get("python_max", "")
-    
+
     # Build python spec with min and optionally max version
     if python_min and python_max:
         python_spec = f"python >={python_min},<{python_max}"
@@ -360,22 +382,24 @@ def build_requirements_section(toml: dict, context: dict) -> dict:
         python_spec = f"python >={python_min}"
     else:
         python_spec = "python"
-    
+
     reqs: dict[str, list[str]] = {"build": [], "host": [], "run": []}
-    
+
     if "tool" in toml and "pixi" in toml["tool"]:
         pixi = toml["tool"]["pixi"]
         # Build deps - normalize from dict/list to list
         build_deps = pixi.get("feature", {}).get("build", {}).get("dependencies", {})
         reqs["build"] = _normalize_deps(build_deps)
-        # Host deps - normalize from dict/list to list  
+        # Host deps - normalize from dict/list to list
         host_deps = pixi.get("host-dependencies", {})
         reqs["host"] = _normalize_deps(host_deps)
         reqs["host"].insert(0, python_spec)
     else:
-        _warn("Pixi configuration not found; `build` and `host` requirement sections "
-              "must be provided via tool.conda.recipe.requirements")
-    
+        _warn(
+            "Pixi configuration not found; `build` and `host` requirement sections "
+            "must be provided via tool.conda.recipe.requirements"
+        )
+
     # Runtime deps from PEP 621
     run_deps = _normalize_deps(toml["project"].get("dependencies", []))
     run_deps.insert(0, python_spec)
@@ -404,66 +428,71 @@ def build_extra_section(toml: dict) -> dict | None:
 # Main Recipe Assembly
 # ----
 
-def assemble_recipe(toml: dict, project_root: pathlib.Path, recipe_dir: pathlib.Path) -> dict:
+
+def assemble_recipe(
+    toml: dict, project_root: pathlib.Path, recipe_dir: pathlib.Path
+) -> dict:
     """
     Assemble the complete recipe from the TOML configuration.
-    
+
     Args:
         toml: Parsed pyproject.toml data
         project_root: Path to the project root directory
         recipe_dir: Path to the recipe output directory
-        
+
     Returns:
         Complete recipe dictionary
     """
     # Build recipe in the specified order: context, package, source, build, requirements, test, about, extra
     recipe: dict[str, _t.Any] = {}
-    
+
     context = build_context_section(toml, project_root)
     recipe["context"] = context
     recipe["package"] = build_package_section(toml, project_root)
     recipe["source"] = build_source_section(toml)
     recipe["build"] = build_build_section(toml)
     recipe["requirements"] = build_requirements_section(toml, context)
-    
+
     test_section = build_test_section(toml)
     if test_section:
         recipe["test"] = test_section
-    
+
     recipe["about"] = build_about_section(toml, recipe_dir)
-    
+
     extra_section = build_extra_section(toml)
     if extra_section:
         recipe["extra"] = extra_section
-    
+
     return recipe
 
 
 def load_pyproject_toml(pyproject_path: pathlib.Path) -> dict:
     """
     Load and parse a pyproject.toml file.
-    
+
     Args:
         pyproject_path: Path to the pyproject.toml file
-        
+
     Returns:
         Parsed TOML data as dictionary
-        
+
     Raises:
         FileNotFoundError: If pyproject.toml doesn't exist
         tomllib.TOMLDecodeError: If TOML is malformed
     """
     if not pyproject_path.exists():
         raise FileNotFoundError(f"{pyproject_path} not found")
-        
+
     with pyproject_path.open("rb") as fh:
         return tomllib.load(fh)
 
 
-def write_recipe_yaml(recipe_dict: dict, output_path: pathlib.Path, overwrite: bool = False) -> None:
+def write_recipe_yaml(
+    recipe_dict: dict, output_path: pathlib.Path, overwrite: bool = False
+) -> None:
     """
     Write the recipe dictionary to a YAML file.
-    
+
     Args:
         recipe_dict: The recipe dictionary to write
         output_path: Path where to write the recipe.yaml
@@ -483,13 +512,11 @@ def write_recipe_yaml(recipe_dict: dict, output_path: pathlib.Path, overwrite: b
 
 
 def generate_recipe(
-    pyproject_path: pathlib.Path, 
-    output_path: pathlib.Path, 
-    overwrite: bool = False
+    pyproject_path: pathlib.Path, output_path: pathlib.Path, overwrite: bool = False
 ) -> None:
     """
     Generate a Rattler-Build recipe.yaml from a pyproject.toml file.
-    
+
     Args:
         pyproject_path: Path to the input pyproject.toml file
         output_path: Path for the output recipe.yaml file

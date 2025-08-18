@@ -30,7 +30,7 @@ from .core import (
 __all__ = [
     "__version__",
     "assemble_recipe",
-    "build_about_section", 
+    "build_about_section",
     "build_build_section",
     "build_context_section",
     "build_extra_section",

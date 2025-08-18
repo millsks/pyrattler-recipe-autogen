@@ -5,7 +5,8 @@ Command line interface for pyrattler-recipe-autogen.
 import argparse
 import pathlib
 import sys
-from typing import Optional, Sequence
+from collections.abc import Sequence
+from typing import Optional
 
 from .core import generate_recipe
 
@@ -13,7 +14,7 @@ from .core import generate_recipe
 def main(argv: Optional[Sequence[str]] = None) -> None:
     """
     Main CLI entry point for generating Rattler-Build recipes.
-    
+
     Args:
         argv: Command line arguments (defaults to sys.argv)
     """
@@ -21,19 +22,21 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         description="Generate Rattler-Build recipe.yaml from pyproject.toml"
     )
     ap.add_argument(
-        "-i", "--input", 
-        default="pyproject.toml", 
-        help="pyproject.toml path (default: ./pyproject.toml)"
+        "-i",
+        "--input",
+        default="pyproject.toml",
+        help="pyproject.toml path (default: ./pyproject.toml)",
     )
     ap.add_argument(
-        "-o", "--output", 
-        default="recipe/recipe.yaml", 
-        help="Output recipe.yaml path (default: ./recipe/recipe.yaml)"
+        "-o",
+        "--output",
+        default="recipe/recipe.yaml",
+        help="Output recipe.yaml path (default: ./recipe/recipe.yaml)",
     )
     ap.add_argument(
-        "--overwrite", 
-        action="store_true", 
-        help="Overwrite output file if it exists (default: backup existing file)."
+        "--overwrite",
+        action="store_true",
+        help="Overwrite output file if it exists (default: backup existing file).",
     )
     args = ap.parse_args(argv)
 
