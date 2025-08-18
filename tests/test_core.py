@@ -2,16 +2,13 @@
 Tests for pyrattler_recipe_autogen package.
 """
 
-import pathlib
-
 # Add src to path for testing
-import sys
+import os
+import pathlib
 import tempfile
 from unittest.mock import patch
 
 import pytest
-
-sys.path.insert(0, str(pathlib.Path(__file__).parent.parent / "src"))
 
 from pyrattler_recipe_autogen.core import (
     _normalize_deps,
@@ -53,8 +50,6 @@ description = "Test package"
 """
 
     # Use mkstemp for better cross-platform compatibility
-    import os
-
     fd, temp_path = tempfile.mkstemp(suffix=".toml", text=True)
     toml_path = pathlib.Path(temp_path)
 
