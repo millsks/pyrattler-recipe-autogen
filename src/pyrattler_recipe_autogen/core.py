@@ -76,6 +76,7 @@ def _get_relative_path(
         # File is not within recipe_dir, compute path using common ancestor
         try:
             # Find common path and build relative path with ../
+            # Note: os.path.commonpath can raise ValueError on Windows when paths are on different drives
             common = pathlib.Path(os.path.commonpath([file_path, recipe_dir]))
 
             # Get path from recipe_dir back to common ancestor
@@ -89,8 +90,11 @@ def _get_relative_path(
             relative_path = pathlib.Path(*up_dirs) / common_to_file
 
             return str(relative_path)
-        except (ValueError, OSError):
-            # Fallback: return absolute path if all else fails
+        except ValueError:
+            # Handle Windows cross-drive path issues or other path resolution failures
+            return str(file_path)
+        except OSError:
+            # Handle filesystem-related errors
             return str(file_path)
 
 

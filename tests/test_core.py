@@ -794,5 +794,17 @@ def test_get_relative_path_edge_cases():
         assert "file.txt" in result
 
 
+def test_get_relative_path_windows_cross_drive():
+    """Test Windows cross-drive path handling."""
+    # Mock os.path.commonpath to raise ValueError (simulating cross-drive scenario)
+    with patch("pyrattler_recipe_autogen.core.os.path.commonpath") as mock_commonpath:
+        mock_commonpath.side_effect = ValueError("Paths don't have the same drive")
+
+        # Should fallback to absolute path when commonpath fails
+        result = _get_relative_path("C:/project/file.txt", "D:/recipes")
+        # Should return the absolute path as fallback
+        assert "C:" in result or result == "C:/project/file.txt"
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
