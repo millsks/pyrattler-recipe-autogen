@@ -8,23 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [unreleased]
 
 ### ⭐ Features
+
 - **core**: Initial release of pyrattler-recipe-autogen
 - **cli**: Command-line interface for generating recipe.yaml from pyproject.toml
 - **build**: Support for hatch-vcs dynamic versioning
 - **dependencies**: Conditional tomli dependency for Python < 3.11
 
 ### 🚜 Refactor
+
 - **structure**: Migrate from simple script to proper src-layout package
 - **tools**: Replace Black/isort with Ruff for unified linting and formatting
 - **workflow**: Migrate from manual dev.py to Pixi for development workflows
 
 ### 🧪 Testing
+
 - **ci**: Comprehensive GitHub Actions workflows for testing, linting, and publishing
 - **coverage**: Full test coverage with Codecov integration
 - **security**: Security scanning with safety and bandit
 - **quality**: SonarQube integration for code quality analysis
 
 ### ⚙️ Miscellaneous Tasks
+
 - **packaging**: Complete pyproject.toml configuration
 - **docs**: Initial README and documentation
 - **git**: Proper .gitignore and project structure
