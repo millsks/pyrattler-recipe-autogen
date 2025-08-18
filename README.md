@@ -129,6 +129,36 @@ pixi run version
 
 # Run the full CI pipeline (format + check + test-cov)
 pixi run ci
+
+# Generate changelog
+pixi run changelog
+
+# Preview unreleased changes
+pixi run changelog-unreleased
+
+# Preview latest version changes
+pixi run changelog-latest
+
+# Preview what the next release would look like
+pixi run release-preview
+```
+
+### Changelog Generation
+
+This project uses [git-cliff](https://git-cliff.org/) to automatically generate changelogs based on conventional commits:
+
+```bash
+# Generate complete changelog
+pixi run changelog
+
+# See unreleased changes
+pixi run changelog-unreleased
+
+# Preview the next release
+pixi run release-preview
+```
+
+The changelog follows [Keep a Changelog](https://keepachangelog.com/) format and uses [Conventional Commits](https://www.conventionalcommits.org/) for automated categorization.
 ```
 
 ### Using Different Environments

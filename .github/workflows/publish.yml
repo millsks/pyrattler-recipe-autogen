@@ -51,6 +51,15 @@ jobs:
     - name: Build package
       run: pixi run build
 
+    - name: Update changelog
+      if: github.event_name == 'release'
+      run: |
+        pixi run changelog
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add CHANGELOG.md
+        git diff --staged --quiet || git commit -m "chore: update changelog for ${{ github.ref_name }}"
+
     - name: Check package
       run: |
         pixi run -e lint twine check dist/*
