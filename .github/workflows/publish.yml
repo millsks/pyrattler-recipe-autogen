@@ -14,7 +14,7 @@ jobs:
       url: https://pypi.org/p/pyrattler-recipe-autogen
     permissions:
       id-token: write # For trusted publishing
-      contents: read
+      contents: write # For uploading release assets
 
     steps:
       - uses: actions/checkout@v4
