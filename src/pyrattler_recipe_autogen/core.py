@@ -19,7 +19,7 @@ import typing as _t
 try:
     import tomllib  # Python ≥3.11
 except ModuleNotFoundError:  # pragma: no cover
-    import tomli as tomllib  # type: ignore
+    import tomli as tomllib
 
 import yaml
 
@@ -349,7 +349,7 @@ def build_source_section(toml: dict) -> dict:
     if section is None:
         # Default to path: .. if configuration is missing
         section = {"path": ".."}
-    return section
+    return _t.cast(dict, section)
 
 
 def build_build_section(toml: dict) -> dict:
@@ -366,7 +366,7 @@ def build_build_section(toml: dict) -> dict:
 
     # Note: string fields are left out if missing (no default applied)
 
-    return section
+    return _t.cast(dict, section)
 
 
 def build_requirements_section(toml: dict, context: dict) -> dict:
@@ -416,12 +416,14 @@ def build_requirements_section(toml: dict, context: dict) -> dict:
 
 def build_test_section(toml: dict) -> dict | None:
     """Build the test section of the recipe."""
-    return _toml_get(toml, "tool.conda.recipe.test")
+    result = _toml_get(toml, "tool.conda.recipe.test")
+    return _t.cast(dict, result) if result is not None else None
 
 
 def build_extra_section(toml: dict) -> dict | None:
     """Build the extra section of the recipe."""
-    return _toml_get(toml, "tool.conda.recipe.extra")
+    result = _toml_get(toml, "tool.conda.recipe.extra")
+    return _t.cast(dict, result) if result is not None else None
 
 
 # ----
@@ -484,7 +486,7 @@ def load_pyproject_toml(pyproject_path: pathlib.Path) -> dict:
         raise FileNotFoundError(f"{pyproject_path} not found")
 
     with pyproject_path.open("rb") as fh:
-        return tomllib.load(fh)
+        return _t.cast(dict, tomllib.load(fh))
 
 
 def write_recipe_yaml(
