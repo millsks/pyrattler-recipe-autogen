@@ -138,10 +138,6 @@ jobs:
       - name: Install dependencies
         run: pixi install
 
-      - name: Run safety check
-        run: |
-          pixi run safety check --json || true
-
       - name: Run bandit security linter
         run: |
           pixi run bandit -r src/ -f json -o bandit-report.json || true
