@@ -5,14 +5,17 @@ Automatically generates recipe.yaml files for rattler-build directly from your P
 ## Installation
 
 ### Requirements
+
 - Python 3.9 or later
 
 ### From PyPI (when published)
+
 ```bash
 pip install pyrattler-recipe-autogen
 ```
 
 ### From Source
+
 ```bash
 git clone https://github.com/millsks/pyrattler-recipe-autogen.git
 cd pyrattler-recipe-autogen
@@ -70,6 +73,7 @@ This project uses [hatch-vcs](https://github.com/ofek/hatch-vcs) for automatic v
 - Dirty working directories append `.dirty` to the version
 
 To check the current version:
+
 ```bash
 pixi run version
 ```
@@ -77,6 +81,7 @@ pixi run version
 ## Development
 
 ### Prerequisites
+
 - [Pixi](https://prefix.dev/docs/pixi/overview) - Modern package management for Python
 
 ### Setup Development Environment
@@ -91,6 +96,30 @@ pixi install
 
 # Set up development environment (install pre-commit hooks)
 pixi run dev-setup
+```
+
+### Pre-commit Hooks
+
+This project uses [pre-commit](https://pre-commit.com/) to ensure code quality and consistency. The hooks run automatically on every commit and include:
+
+- **Code Formatting**: Ruff formatting and linting
+- **Type Checking**: MyPy static type analysis
+- **Security Scanning**: Bandit security linter
+- **File Validation**: YAML, TOML, JSON syntax checking
+- **Git Best Practices**: Large file detection, merge conflict detection
+- **Commit Messages**: Conventional commit format validation
+- **Documentation**: Markdown linting and formatting
+- **GitHub Actions**: Workflow file validation
+
+```bash
+# Install hooks (done automatically by dev-setup)
+pixi run pre-commit-install
+
+# Run all hooks manually
+pixi run pre-commit-run
+
+# Run specific hook
+pixi run pre-commit run ruff --all-files
 ```
 
 ### Development Tasks
@@ -159,7 +188,8 @@ pixi run release-preview
 ```
 
 The changelog follows [Keep a Changelog](https://keepachangelog.com/) format and uses [Conventional Commits](https://www.conventionalcommits.org/) for automated categorization.
-```
+
+````
 
 ### Using Different Environments
 
@@ -172,13 +202,13 @@ pixi shell
 # Use the test-only environment
 pixi shell -e test
 
-# Use the lint-only environment  
+# Use the lint-only environment
 pixi shell -e lint
 
 # Run tasks in specific environments
 pixi run -e test test
 pixi run -e lint lint
-```
+````
 
 ### Package Structure
 
