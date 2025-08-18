@@ -2,7 +2,7 @@ name: SonarQube Analysis
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -14,42 +14,42 @@ jobs:
       contents: read
       pull-requests: write
       checks: write
-    
+
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # Shallow clones should be disabled for better analysis
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Shallow clones should be disabled for better analysis
 
-    - name: Set up Pixi
-      uses: prefix-dev/setup-pixi@v0.8.1
-      with:
-        pixi-version: v0.29.0
-        cache: true
+      - name: Set up Pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.29.0
+          cache: true
 
-    - name: Install dependencies
-      run: pixi install
+      - name: Install dependencies
+        run: pixi install
 
-    - name: Run tests with coverage
-      run: pixi run test-cov
+      - name: Run tests with coverage
+        run: pixi run test-cov
 
-    - name: Run ruff linting with JSON output
-      run: |
-        pixi run lint --output-format=json > ruff-report.json || true
+      - name: Run ruff linting with JSON output
+        run: |
+          pixi run lint --output-format=json > ruff-report.json || true
 
-    - name: SonarQube Scan
-      uses: sonarqube-scan-action@master
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
-    - name: SonarQube Quality Gate check
-      id: sonarqube-quality-gate-check
-      uses: sonarqube-quality-gate-action@master
-      timeout-minutes: 5
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      - name: SonarQube Quality Gate check
+        id: sonarqube-quality-gate-check
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
-    - name: "Example show SonarQube Quality Gate Status value"
-      run: echo "The Quality Gate status is ${{ steps.sonarqube-quality-gate-check.outputs.quality-gate-status }}"
+      - name: "Example show SonarQube Quality Gate Status value"
+        run: echo "The Quality Gate status is ${{ steps.sonarqube-quality-gate-check.outputs.quality-gate-status }}"
