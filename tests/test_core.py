@@ -89,13 +89,15 @@ def test_get_relative_path():
     result = _get_relative_path("/home/user/project/file.txt", "/home/user/project")
     assert result == "file.txt"
 
-    # Test file in subdirectory
+    # Test file in subdirectory - normalize for cross-platform compatibility
     result = _get_relative_path("/home/user/project/sub/file.txt", "/home/user/project")
-    assert result == "sub/file.txt"
+    expected = str(pathlib.Path("sub/file.txt"))
+    assert result == expected
 
     # Test file outside recipe directory (should use ../)
     result = _get_relative_path("/home/user/file.txt", "/home/user/project")
-    assert result == "../file.txt"
+    expected = str(pathlib.Path("../file.txt"))
+    assert result == expected
 
 
 def test_warn(capsys):

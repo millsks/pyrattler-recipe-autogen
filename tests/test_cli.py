@@ -2,6 +2,7 @@
 Tests for CLI functionality.
 """
 
+import pathlib
 from unittest.mock import patch
 
 import pytest
@@ -18,7 +19,8 @@ def test_main_default_args():
         mock_generate.assert_called_once()
         args = mock_generate.call_args[0]
         assert str(args[0]) == "pyproject.toml"
-        assert str(args[1]) == "recipe/recipe.yaml"
+        # Use pathlib to normalize path separators for cross-platform compatibility
+        assert str(args[1]) == str(pathlib.Path("recipe/recipe.yaml"))
         assert args[2] is False  # overwrite parameter
 
 
