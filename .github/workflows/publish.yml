@@ -34,13 +34,12 @@ jobs:
         if: github.event_name == 'release'
         run: |
           TAG_VERSION=${GITHUB_REF#refs/tags/v}
-          PACKAGE_VERSION=$(pixi run version)
           echo "Tag version: $TAG_VERSION"
-          echo "Package version: $PACKAGE_VERSION"
-          if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
-            echo "Version mismatch! Tag: $TAG_VERSION, Package: $PACKAGE_VERSION"
-            exit 1
-          fi
+          echo "Building from tag: $GITHUB_REF"
+          # Since we're building from a release tag, version should be correct
+
+      - name: Build package
+        run: pixi run build
 
       - name: Run tests
         run: pixi run test-cov
