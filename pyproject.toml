@@ -52,6 +52,7 @@ include = [
 
 [tool.hatch.version]
 source = "vcs"
+raw-options = { local_scheme = "no-local-version" }
 
 [tool.hatch.build.hooks.vcs]
 version-file = "src/pyrattler_recipe_autogen/_version.py"

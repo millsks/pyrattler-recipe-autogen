@@ -251,6 +251,43 @@ The tool reads configuration from your `pyproject.toml` file and supports additi
 # Extra recipe sections
 ```
 
+## Releases and Contributing
+
+### Versioning and Releases
+
+This project uses `hatch-vcs` for automatic version management based on git tags:
+
+- **Development versions**: Generated automatically as `0.1.devN` (where N is the number of commits since the last tag)
+- **Release versions**: Created by pushing git tags in the format `v1.0.0`
+
+#### Creating a Release
+
+1. Create and push a git tag:
+
+   ```bash
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+
+2. Create a GitHub release from the tag, which will automatically:
+   - Build the package
+   - Run all tests and checks
+   - Publish to PyPI
+   - Update the changelog
+
+#### Test Publishing
+
+For testing the publishing process, use the manual workflow dispatch in GitHub Actions, which publishes to Test PyPI with development versions.
+
+### Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests: `pixi run test`
+5. Run checks: `pixi run check`
+6. Submit a pull request
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
