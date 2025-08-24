@@ -2082,8 +2082,9 @@ def _detect_pixi_integration(project_path: pathlib.Path) -> dict[str, _t.Any]:
             env_section = pixi_data.get("environments", {})
             pixi_info["environments"] = list(env_section.keys())
 
-        except Exception:
-            # If we can't parse, just mark as detected
+        except (OSError, tomllib.TOMLDecodeError, KeyError, AttributeError):
+            # If we can't parse the file (permissions, malformed TOML, etc.),
+            # just mark as detected without detailed info
             pass
 
     # Check for pixi.lock

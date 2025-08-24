@@ -50,7 +50,16 @@ repos:
     hooks:
       - id: bandit
         args:
-          [-r, src/, -f, json, -o, bandit-report.json, --configfile, .bandit]
+          [
+            -r,
+            src/,
+            -f,
+            json,
+            -o,
+            bandit-report.json,
+            --configfile,
+            pyproject.toml,
+          ]
         pass_filenames: false
 
   # Dependency vulnerability scanning
