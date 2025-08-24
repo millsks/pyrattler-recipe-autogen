@@ -60,6 +60,13 @@ Features intelligent auto-detection, advanced dependency management, and compreh
 - **Development Workflow**: Optimization suggestions for development setup
 - **Tool Detection**: Identifies pytest, mypy, ruff, and other development tools
 
+### 🔒 Security & Quality Assurance
+
+- **Security Scanning**: Bandit code security analysis and Safety dependency vulnerability checks
+- **Code Quality**: Comprehensive linting with Ruff and type checking with MyPy
+- **Test Coverage**: High test coverage requirements with pytest and coverage reporting
+- **Pre-commit Hooks**: Automated quality checks on every commit
+
 ## 📋 Requirements
 
 - Python 3.9 or later
@@ -539,10 +546,16 @@ pixi run format
 pixi run lint
 
 # Run type checking
-pixi run typecheck
+pixi run type-check
 
-# Run all checks
+# Run security checks
+pixi run security-check
+
+# Run all checks (lint + type-check)
 pixi run check
+
+# Run all checks including security (lint + type-check + security-check)
+pixi run check-all
 
 # Build package
 pixi run build
@@ -557,7 +570,7 @@ pixi run version
 ### Running the Full CI Pipeline
 
 ```bash
-pixi run ci  # Runs format + check + test-cov
+pixi run ci  # Runs format + check + test-cov (includes security checks)
 ```
 
 ### Project Structure
@@ -626,9 +639,9 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 4. **Make Changes** and ensure tests pass:
 
    ```bash
-   pixi run format    # Format code
-   pixi run check     # Run linting and type checking
-   pixi run test-cov  # Run tests with coverage
+   pixi run format       # Format code
+   pixi run check-all    # Run linting, type checking, and security checks
+   pixi run test-cov     # Run tests with coverage
    ```
 
 5. **Commit with Conventional Commits**:
@@ -807,10 +820,16 @@ pixi run format
 pixi run lint
 
 # Run type checking
-pixi run typecheck
+pixi run type-check
 
-# Run all checks (lint + typecheck)
+# Run security checks
+pixi run security-check
+
+# Run all checks (lint + type-check)
 pixi run check
+
+# Run all checks including security (lint + type-check + security-check)
+pixi run check-all
 
 # Build package
 pixi run build

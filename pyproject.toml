@@ -175,6 +175,8 @@ pytest-cov = "*"
 [tool.pixi.feature.lint.dependencies]
 ruff = "*"
 mypy = "*"
+bandit = "*"
+safety = "*"
 
 [tool.pixi.environments]
 default = { features = ["dev"], solve-group = "default" }
@@ -218,11 +220,13 @@ test-cov = "pytest --cov=pyrattler_recipe_autogen --cov-report=term-missing --co
 [tool.pixi.feature.lint.tasks]
 format = "ruff check --fix --exit-non-zero-on-fix src/ tests/ && ruff format src/ tests/"
 lint = "ruff check src/ tests/"
-typecheck = "mypy src/pyrattler_recipe_autogen/"
-check = { depends-on = ["lint", "typecheck"] }
+type-check = "mypy src/pyrattler_recipe_autogen/"
+security-check = "bandit -r src/ -c pyproject.toml && safety check --json"
+check = { depends-on = ["lint", "type-check"] }
+check-all = { depends-on = ["lint", "type-check", "security-check"] }
 
 [tool.pixi.feature.dev.tasks]
-ci = { depends-on = ["check", "test-cov", "build"] }
+ci = { depends-on = ["check-all", "test-cov", "build"] }
 changelog = "git-cliff --output CHANGELOG.md"
 changelog-unreleased = "git-cliff --unreleased --tag unreleased --output -"
 changelog-latest = "git-cliff --latest --output -"

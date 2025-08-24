@@ -19,9 +19,10 @@ Brief description of the changes made.
 
 - [ ] I have run `pixi run format` and my code follows the style guidelines
 - [ ] I have run `pixi run lint` and resolved any linting issues
-- [ ] I have run `pixi run typecheck` and resolved any type checking issues
+- [ ] I have run `pixi run type-check` and resolved any type checking issues
+- [ ] I have run `pixi run security-check` and resolved any security issues
 - [ ] I have run `pixi run test-cov` and maintained test coverage above 95%
-- [ ] I have run `pixi run ci` and all checks pass
+- [ ] I have run `pixi run check-all` and all checks pass
 
 ## Checklist
 

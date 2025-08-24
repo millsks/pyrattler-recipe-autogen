@@ -76,10 +76,16 @@ pixi run format
 pixi run lint
 
 # Run type checking
-pixi run typecheck
+pixi run type-check
 
-# Run all quality checks
+# Run security checks
+pixi run security-check
+
+# Run all quality checks (lint + type-check)
 pixi run check
+
+# Run all quality checks including security (lint + type-check + security-check)
+pixi run check-all
 
 # Run tests
 pixi run test

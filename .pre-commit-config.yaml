@@ -98,6 +98,16 @@ repos:
     hooks:
       - id: actionlint
 
+  # Pixi lock file updates
+  - repo: local
+    hooks:
+      - id: pixi-lock
+        name: Update pixi.lock when pyproject.toml changes
+        entry: pixi lock
+        language: system
+        files: ^pyproject\.toml$
+        pass_filenames: false
+
 # Configuration
 ci:
   autoupdate_schedule: weekly
