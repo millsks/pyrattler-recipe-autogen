@@ -78,7 +78,7 @@ jobs:
         run: pixi run lint
 
       - name: Run type checking
-        run: pixi run typecheck
+        run: pixi run type-check
 
       - name: Check formatting
         run: |
