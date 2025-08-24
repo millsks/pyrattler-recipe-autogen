@@ -281,7 +281,7 @@ def build_package_section(toml: dict, project_root: pathlib.Path) -> dict:
     """Build the package section of the recipe."""
     return {
         "name": "${{ name }}",
-        "version": "${{ version }}",
+        "version": _VERSION_TEMPLATE,
     }
 
 
@@ -365,13 +365,196 @@ def build_about_section(toml: dict, recipe_dir: pathlib.Path) -> dict:
 
 
 def build_source_section(toml: dict) -> dict:
-    """Build the source section of the recipe."""
-    # Check for configuration in tool.conda.recipe.source
-    section = _toml_get(toml, "tool.conda.recipe.source")
-    if section is None:
-        # Default to path: .. if configuration is missing
-        section = {"path": ".."}
-    return _t.cast(dict, section)
+    """Build the source section of the recipe with intelligent auto-detection."""
+    # Check for explicit configuration in tool.conda.recipe.source
+    explicit_source = _toml_get(toml, "tool.conda.recipe.source")
+    if explicit_source:
+        return _t.cast(dict, explicit_source)
+
+    # Auto-detect source configuration
+    detected_source = _auto_detect_source_section(toml)
+
+    return detected_source
+
+
+def _auto_detect_source_section(toml: dict) -> dict:
+    """Auto-detect source configuration from project metadata."""
+    project = toml.get("project", {})
+    urls = project.get("urls", {}) if isinstance(project.get("urls"), dict) else {}
+    urls_norm = {k.lower(): v for k, v in urls.items()}
+
+    # Try different source detection strategies in order of preference
+
+    # 1. Try to detect Git repository source
+    git_source = _detect_git_source(urls_norm)
+    if git_source:
+        return git_source
+
+    # 2. Try to generate PyPI source URL
+    pypi_source = _detect_pypi_source(project)
+    if pypi_source:
+        return pypi_source
+
+    # 3. Try to detect other URL sources
+    url_source = _detect_url_source(urls_norm)
+    if url_source:
+        return url_source
+
+    # 4. Default to local path
+    return {"path": ".."}
+
+
+def _detect_git_source(urls: dict) -> dict | None:
+    """Detect Git repository source from project URLs."""
+    git_url = None
+
+    # Look for repository URL in common keys
+    for key in ["repository", "source", "homepage"]:
+        url = urls.get(key, "")
+        if url and _is_git_url(url):
+            git_url = url
+            break
+
+    if not git_url:
+        return None
+
+    # Convert various Git URL formats to standard format
+    normalized_url = _normalize_git_url(git_url)
+
+    git_source = {"git": normalized_url}
+
+    # Try to detect branch or tag
+    branch_or_tag = _detect_git_ref()
+    if branch_or_tag:
+        if branch_or_tag.startswith("v") or "." in branch_or_tag:
+            git_source["tag"] = branch_or_tag
+        else:
+            git_source["branch"] = branch_or_tag
+
+    return git_source
+
+
+def _is_git_url(url: str) -> bool:
+    """Check if a URL appears to be a Git repository."""
+    git_indicators = [
+        "github.com",
+        "gitlab.com",
+        "bitbucket.org",
+        "git@",
+        ".git",
+        "/git/",
+        "sourceforge.net",
+        "codeberg.org",
+    ]
+    return any(indicator in url.lower() for indicator in git_indicators)
+
+
+def _normalize_git_url(url: str) -> str:
+    """Normalize Git URL to a standard format."""
+    # Convert SSH to HTTPS for conda recipes
+    if url.startswith("git@github.com:"):
+        url = url.replace("git@github.com:", "https://github.com/")
+    elif url.startswith("git@gitlab.com:"):
+        url = url.replace("git@gitlab.com:", "https://gitlab.com/")
+    elif url.startswith("git@bitbucket.org:"):
+        url = url.replace("git@bitbucket.org:", "https://bitbucket.org/")
+
+    # Remove .git suffix if present
+    if url.endswith(".git"):
+        url = url[:-4]
+
+    # Remove trailing slash
+    url = url.rstrip("/")
+
+    return url
+
+
+def _detect_git_ref() -> str | None:
+    """Try to detect current Git branch or tag."""
+    try:
+        # First try to get current tag
+        result = subprocess.run(
+            ["git", "describe", "--tags", "--exact-match"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except (subprocess.SubprocessError, FileNotFoundError):
+        pass
+
+    try:
+        # Then try to get current branch
+        result = subprocess.run(
+            ["git", "branch", "--show-current"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0:
+            branch = result.stdout.strip()
+            # Only return non-main/master branches for reproducibility
+            if branch and branch not in ["main", "master", "develop"]:
+                return branch
+    except (subprocess.SubprocessError, FileNotFoundError):
+        pass
+
+    return None
+
+
+def _detect_pypi_source(project: dict) -> dict | None:
+    """Generate PyPI source URL from project metadata."""
+    name = project.get("name")
+    version = project.get("version")
+
+    if not name:
+        return None
+
+    # For dynamic version, use template variables
+    if version:
+        template_version = version
+    else:
+        # Check if version is dynamic
+        dynamic_fields = project.get("dynamic", [])
+        if "version" in dynamic_fields:
+            template_version = _VERSION_TEMPLATE
+        else:
+            return None
+
+    # Normalize package name for PyPI
+    pypi_name = name.replace("-", "_")
+    first_char = name[0].lower()
+
+    pypi_source = {
+        "url": f"https://pypi.org/packages/source/{first_char}/{name}/{pypi_name}-{template_version}.tar.gz"
+    }
+
+    # Only add sha256 if we have a static version
+    if version and version != _VERSION_TEMPLATE:
+        _warn(
+            f"PyPI source detected for {name} v{version}. Consider adding sha256 checksum manually."
+        )
+
+    return pypi_source
+
+
+def _detect_url_source(urls: dict) -> dict | None:
+    """Detect other URL-based sources from project metadata."""
+    # Look for download or source URLs
+    for key in ["download", "source", "archive", "tarball", "zip"]:
+        url = urls.get(key, "")
+        if url and _is_archive_url(url):
+            return {"url": url}
+
+    return None
+
+
+def _is_archive_url(url: str) -> bool:
+    """Check if URL appears to be a downloadable archive."""
+    archive_extensions = [".tar.gz", ".tar.bz2", ".tar.xz", ".zip", ".whl"]
+    url_lower = url.lower()
+    return any(url_lower.endswith(ext) for ext in archive_extensions)
 
 
 def _detect_build_script(build_system: dict) -> str:
@@ -682,6 +865,9 @@ _PYTEST_CMD = "python -m pytest"
 _UNITTEST_CMD = "python -m unittest discover"
 _TEST_PACKAGES = {"pytest", "unittest", "unittest2", "nose", "nose2"}
 _TEST_GROUPS = ["test", "testing", "tests", "dev", "development"]
+
+# Template constants
+_VERSION_TEMPLATE = "${{ version }}"
 
 
 def _detect_test_commands(toml: dict) -> list[str]:

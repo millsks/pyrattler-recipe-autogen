@@ -304,6 +304,301 @@ def test_build_source_section():
     assert result == {"url": "https://example.com/package.tar.gz"}
 
 
+def test_build_source_section_git_detection():
+    """Test auto-detection of Git repository sources."""
+    toml_data = {
+        "project": {
+            "name": "test-package",
+            "urls": {"Repository": "https://github.com/user/repo"},
+        }
+    }
+
+    with patch("pyrattler_recipe_autogen.core._detect_git_ref") as mock_git_ref:
+        mock_git_ref.return_value = None
+        result = build_source_section(toml_data)
+
+    assert result["git"] == "https://github.com/user/repo"
+    assert "tag" not in result
+    assert "branch" not in result
+
+
+def test_build_source_section_git_with_tag():
+    """Test Git source detection with tag."""
+    toml_data = {
+        "project": {
+            "name": "test-package",
+            "urls": {"Repository": "https://github.com/user/repo.git"},
+        }
+    }
+
+    with patch("pyrattler_recipe_autogen.core._detect_git_ref") as mock_git_ref:
+        mock_git_ref.return_value = "v1.2.3"
+        result = build_source_section(toml_data)
+
+    assert result["git"] == "https://github.com/user/repo"
+    assert result["tag"] == "v1.2.3"
+
+
+def test_build_source_section_git_ssh_conversion():
+    """Test conversion of SSH Git URLs to HTTPS."""
+    toml_data = {
+        "project": {
+            "name": "test-package",
+            "urls": {"Repository": "git@github.com:user/repo.git"},
+        }
+    }
+
+    with patch("pyrattler_recipe_autogen.core._detect_git_ref") as mock_git_ref:
+        mock_git_ref.return_value = None
+        result = build_source_section(toml_data)
+
+    assert result["git"] == "https://github.com/user/repo"
+
+
+def test_build_source_section_pypi_detection():
+    """Test auto-detection of PyPI sources."""
+    toml_data = {"project": {"name": "my-awesome-package", "version": "1.2.3"}}
+
+    result = build_source_section(toml_data)
+    expected_url = "https://pypi.org/packages/source/m/my-awesome-package/my_awesome_package-1.2.3.tar.gz"
+    assert result["url"] == expected_url
+
+
+def test_build_source_section_pypi_dynamic_version():
+    """Test PyPI source with dynamic version."""
+    toml_data = {"project": {"name": "test-package", "dynamic": ["version"]}}
+
+    result = build_source_section(toml_data)
+    expected_url = "https://pypi.org/packages/source/t/test-package/test_package-${{ version }}.tar.gz"
+    assert result["url"] == expected_url
+
+
+def test_build_source_section_url_detection():
+    """Test detection of archive URLs."""
+    toml_data = {
+        "project": {
+            "name": "test-package",
+            "urls": {"Download": "https://example.com/package-1.0.0.tar.gz"},
+        }
+    }
+
+    result = build_source_section(toml_data)
+    assert result["url"] == "https://example.com/package-1.0.0.tar.gz"
+
+
+def test_detect_git_source_various_platforms():
+    """Test Git source detection for various platforms."""
+    from pyrattler_recipe_autogen.core import _detect_git_source
+
+    test_cases = [
+        {"repository": "https://github.com/user/repo"},
+        {"repository": "https://gitlab.com/user/repo"},
+        {"repository": "https://bitbucket.org/user/repo"},
+        {"repository": "git@github.com:user/repo.git"},
+        {"homepage": "https://github.com/user/repo"},
+    ]
+
+    for urls in test_cases:
+        with patch("pyrattler_recipe_autogen.core._detect_git_ref") as mock_git_ref:
+            mock_git_ref.return_value = None
+            result = _detect_git_source(urls)
+        assert result is not None
+        assert "git" in result
+
+
+def test_is_git_url():
+    """Test Git URL detection."""
+    from pyrattler_recipe_autogen.core import _is_git_url
+
+    git_urls = [
+        "https://github.com/user/repo",
+        "https://gitlab.com/user/repo",
+        "git@github.com:user/repo.git",
+        "https://bitbucket.org/user/repo",
+        "https://sourceforge.net/p/project/git",
+    ]
+
+    non_git_urls = [
+        "https://example.com",
+        "https://pypi.org/project/package",
+        "https://docs.python.org",
+    ]
+
+    for url in git_urls:
+        assert _is_git_url(url), f"Expected {url} to be detected as Git URL"
+
+    for url in non_git_urls:
+        assert not _is_git_url(url), f"Expected {url} to NOT be detected as Git URL"
+
+
+def test_normalize_git_url():
+    """Test Git URL normalization."""
+    from pyrattler_recipe_autogen.core import _normalize_git_url
+
+    test_cases = [
+        ("git@github.com:user/repo.git", "https://github.com/user/repo"),
+        ("git@gitlab.com:user/repo.git", "https://gitlab.com/user/repo"),
+        ("https://github.com/user/repo.git", "https://github.com/user/repo"),
+        ("https://github.com/user/repo/", "https://github.com/user/repo"),
+        ("https://github.com/user/repo", "https://github.com/user/repo"),
+    ]
+
+    for input_url, expected in test_cases:
+        result = _normalize_git_url(input_url)
+        assert result == expected, f"Expected {input_url} -> {expected}, got {result}"
+
+
+def test_detect_git_ref():
+    """Test Git reference detection."""
+    from pyrattler_recipe_autogen.core import _detect_git_ref
+
+    # Test tag detection
+    with patch("subprocess.run") as mock_run:
+        mock_run.return_value.returncode = 0
+        mock_run.return_value.stdout = "v1.2.3\n"
+        result = _detect_git_ref()
+        assert result == "v1.2.3"
+
+    # Test branch detection when tag fails
+    with patch("subprocess.run") as mock_run:
+
+        def side_effect(*args, **kwargs):
+            if "describe" in args[0]:
+                mock_result = MagicMock()
+                mock_result.returncode = 1
+                return mock_result
+            elif "branch" in args[0]:
+                mock_result = MagicMock()
+                mock_result.returncode = 0
+                mock_result.stdout = "feature-branch\n"
+                return mock_result
+
+        mock_run.side_effect = side_effect
+        result = _detect_git_ref()
+        assert result == "feature-branch"
+
+    # Test main/master branch filtering
+    with patch("subprocess.run") as mock_run:
+
+        def side_effect(*args, **kwargs):
+            if "describe" in args[0]:
+                mock_result = MagicMock()
+                mock_result.returncode = 1
+                return mock_result
+            elif "branch" in args[0]:
+                mock_result = MagicMock()
+                mock_result.returncode = 0
+                mock_result.stdout = "main\n"
+                return mock_result
+
+        mock_run.side_effect = side_effect
+        result = _detect_git_ref()
+        assert result is None  # main branch should be filtered out
+
+
+def test_detect_pypi_source():
+    """Test PyPI source detection."""
+    from pyrattler_recipe_autogen.core import _detect_pypi_source
+
+    # Test with static version
+    project = {"name": "my-package", "version": "1.0.0"}
+    result = _detect_pypi_source(project)
+    expected_url = (
+        "https://pypi.org/packages/source/m/my-package/my_package-1.0.0.tar.gz"
+    )
+    assert result["url"] == expected_url
+
+    # Test with dynamic version
+    project = {"name": "test-pkg", "dynamic": ["version"]}
+    result = _detect_pypi_source(project)
+    expected_url = (
+        "https://pypi.org/packages/source/t/test-pkg/test_pkg-${{ version }}.tar.gz"
+    )
+    assert result["url"] == expected_url
+
+    # Test with missing name
+    project = {"version": "1.0.0"}
+    result = _detect_pypi_source(project)
+    assert result is None
+
+
+def test_is_archive_url():
+    """Test archive URL detection."""
+    from pyrattler_recipe_autogen.core import _is_archive_url
+
+    archive_urls = [
+        "https://example.com/package.tar.gz",
+        "https://example.com/package.tar.bz2",
+        "https://example.com/package.tar.xz",
+        "https://example.com/package.zip",
+        "https://example.com/package.whl",
+    ]
+
+    non_archive_urls = [
+        "https://example.com",
+        "https://github.com/user/repo",
+        "https://example.com/page.html",
+    ]
+
+    for url in archive_urls:
+        assert _is_archive_url(url), f"Expected {url} to be detected as archive URL"
+
+    for url in non_archive_urls:
+        assert not _is_archive_url(
+            url
+        ), f"Expected {url} to NOT be detected as archive URL"
+
+
+def test_build_source_section_priority():
+    """Test source detection priority (Git > PyPI > URL > Path)."""
+    # Git should take priority over PyPI
+    toml_data = {
+        "project": {
+            "name": "test-package",
+            "version": "1.0.0",
+            "urls": {"Repository": "https://github.com/user/repo"},
+        }
+    }
+
+    with patch("pyrattler_recipe_autogen.core._detect_git_ref") as mock_git_ref:
+        mock_git_ref.return_value = None
+        result = build_source_section(toml_data)
+
+    assert "git" in result
+    assert "url" not in result
+
+    # PyPI should take priority over generic URL
+    toml_data = {
+        "project": {
+            "name": "test-package",
+            "version": "1.0.0",
+            "urls": {"Download": "https://example.com/some-file.tar.gz"},
+        }
+    }
+
+    result = build_source_section(toml_data)
+    assert result["url"].startswith("https://pypi.org/packages/source")
+
+
+def test_build_source_section_explicit_override():
+    """Test that explicit configuration overrides auto-detection."""
+    toml_data = {
+        "project": {
+            "name": "test-package",
+            "urls": {"Repository": "https://github.com/user/repo"},
+        },
+        "tool": {
+            "conda": {
+                "recipe": {"source": {"url": "https://custom.com/package.tar.gz"}}
+            }
+        },
+    }
+
+    result = build_source_section(toml_data)
+    assert result == {"url": "https://custom.com/package.tar.gz"}
+    # Should not auto-detect Git source when explicit config is present
+
+
 def test_build_build_section():
     """Test building build section."""
     toml_data = {}
