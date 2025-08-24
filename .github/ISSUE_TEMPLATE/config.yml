@@ -1,6 +1,9 @@
 blank_issues_enabled: false
 contact_links:
-  - name: 💬 GitHub Discussions
+  - name: � Report Security Vulnerability
+    url: https://github.com/millsks/pyrattler-recipe-autogen/security/advisories/new
+    about: Report security vulnerabilities privately through GitHub Security Advisories (preferred method)
+  - name: �💬 GitHub Discussions
     url: https://github.com/millsks/pyrattler-recipe-autogen/discussions
     about: Ask questions, share ideas, and discuss with the community
   - name: 📚 Documentation
@@ -9,3 +12,6 @@ contact_links:
   - name: 🛠️ Contributing Guide
     url: https://github.com/millsks/pyrattler-recipe-autogen/blob/main/CONTRIBUTING.md
     about: Learn how to contribute to the project
+  - name: 🔐 Security Policy
+    url: https://github.com/millsks/pyrattler-recipe-autogen/blob/main/SECURITY.md
+    about: Review our security policy and responsible disclosure guidelines
