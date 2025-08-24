@@ -599,9 +599,200 @@ def build_requirements_section(toml: dict, context: dict) -> dict:
 
 
 def build_test_section(toml: dict) -> dict | None:
-    """Build the test section of the recipe."""
-    result = _toml_get(toml, "tool.conda.recipe.test")
-    return _t.cast(dict, result) if result is not None else None
+    """Build the test section of the recipe with intelligent auto-detection."""
+    # First check if there's explicit test configuration
+    explicit_test = _toml_get(toml, "tool.conda.recipe.test")
+    if explicit_test:
+        return _t.cast(dict, explicit_test)
+
+    # Auto-detect test requirements and commands
+    test_section = _auto_detect_test_section(toml)
+
+    return test_section if test_section else None
+
+
+def _auto_detect_test_section(toml: dict) -> dict | None:
+    """Auto-detect test configuration from project structure and dependencies."""
+    test_config: dict[str, _t.Any] = {}
+
+    # Detect test imports
+    imports = _detect_test_imports(toml)
+    if imports:
+        test_config["python"] = {"imports": imports}
+
+    # Detect test commands
+    commands = _detect_test_commands(toml)
+    if commands:
+        if "python" not in test_config:
+            test_config["python"] = {}
+        test_config["python"]["commands"] = commands
+
+    # Detect test requirements
+    requires = _detect_test_requirements(toml)
+    if requires:
+        test_config["requires"] = requires
+
+    return test_config if test_config else None
+
+
+def _detect_test_imports(toml: dict) -> list[str]:
+    """Detect test imports based on project package name and structure."""
+    imports = []
+
+    # Get main package name
+    project = toml.get("project", {})
+    package_name = project.get("name", "").replace("-", "_")
+
+    if package_name:
+        imports.append(package_name)
+
+    # Check for common test packages in dependencies
+    deps_to_check = [
+        project.get("dependencies", []),
+        project.get("optional-dependencies", {}).get("test", []),
+        project.get("optional-dependencies", {}).get("testing", []),
+    ]
+
+    for deps in deps_to_check:
+        if isinstance(deps, list):
+            for dep in deps:
+                dep_name = (
+                    dep.split()[0]
+                    .split(">=")[0]
+                    .split("==")[0]
+                    .split("<")[0]
+                    .split(">")[0]
+                )
+                if dep_name in _TEST_PACKAGES:
+                    imports.append(dep_name)
+
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_imports = []
+    for imp in imports:
+        if imp not in seen:
+            seen.add(imp)
+            unique_imports.append(imp)
+
+    return unique_imports
+
+
+# Test detection constants
+_PYTEST_CMD = "python -m pytest"
+_UNITTEST_CMD = "python -m unittest discover"
+_TEST_PACKAGES = {"pytest", "unittest", "unittest2", "nose", "nose2"}
+_TEST_GROUPS = ["test", "testing", "tests", "dev", "development"]
+
+
+def _detect_test_commands(toml: dict) -> list[str]:
+    """Detect test commands from project configuration."""
+    commands = []
+
+    # Check for pytest configuration
+    if _has_pytest_config(toml):
+        commands.append(_PYTEST_CMD)
+
+    # Check for test commands in scripts
+    script_commands = _detect_script_test_commands(toml)
+    commands.extend(script_commands)
+
+    # Check for test frameworks in dependencies
+    framework_commands = _detect_framework_commands(toml, commands)
+    commands.extend(framework_commands)
+
+    # Check hatch environment scripts
+    hatch_commands = _detect_hatch_test_commands(toml)
+    commands.extend(hatch_commands)
+
+    return commands
+
+
+def _has_pytest_config(toml: dict) -> bool:
+    """Check if pytest is configured in the project."""
+    return "tool" in toml and "pytest" in toml["tool"]
+
+
+def _detect_script_test_commands(toml: dict) -> list[str]:
+    """Detect test commands from project scripts."""
+    commands = []
+    project = toml.get("project", {})
+    scripts = project.get("scripts", {})
+
+    for script_name, script_cmd in scripts.items():
+        if "test" in script_name.lower() or "pytest" in script_cmd:
+            commands.append(f"python -m {script_cmd}")
+
+    return commands
+
+
+def _detect_framework_commands(toml: dict, existing_commands: list[str]) -> list[str]:
+    """Detect test framework commands from dependencies."""
+    commands = []
+
+    # Get all dependencies
+    project = toml.get("project", {})
+    deps = project.get("dependencies", [])
+    optional_deps = project.get("optional-dependencies", {})
+
+    all_deps = deps[:]
+    for extra_deps in optional_deps.values():
+        if isinstance(extra_deps, list):
+            all_deps.extend(extra_deps)
+
+    # Check for test frameworks
+    has_pytest = any("pytest" in dep for dep in all_deps)
+    has_unittest = any("unittest" in dep for dep in all_deps)
+
+    if has_pytest and _PYTEST_CMD not in existing_commands:
+        commands.append(_PYTEST_CMD)
+    elif has_unittest and not existing_commands:
+        commands.append(_UNITTEST_CMD)
+
+    return commands
+
+
+def _detect_hatch_test_commands(toml: dict) -> list[str]:
+    """Detect test commands from hatch environment configuration."""
+    commands: list[str] = []
+
+    if "tool" not in toml or "hatch" not in toml["tool"]:
+        return commands
+
+    hatch_envs = toml["tool"]["hatch"].get("envs", {})
+    for env_name, env_config in hatch_envs.items():
+        if "test" in env_name.lower():
+            scripts = env_config.get("scripts", {})
+            for script_cmd in scripts.values():
+                if isinstance(script_cmd, str) and script_cmd not in commands:
+                    commands.append(script_cmd)
+
+    return commands
+
+
+def _detect_test_requirements(toml: dict) -> list[str]:
+    """Detect test requirements from optional dependencies."""
+    test_requires = []
+
+    project = toml.get("project", {})
+    optional_deps = project.get("optional-dependencies", {})
+
+    for group_name, deps in optional_deps.items():
+        if group_name.lower() in _TEST_GROUPS and isinstance(deps, list):
+            for dep in deps:
+                # Convert pip-style to conda-style
+                conda_dep = dep.replace("_", "-").split(";")[0].strip()
+                if conda_dep not in test_requires:
+                    test_requires.append(conda_dep)
+
+    # Add common test tools if not already present
+    has_pytest = any("pytest" in req for req in test_requires)
+    if not has_pytest:
+        # Check if pytest is in main dependencies
+        main_deps = project.get("dependencies", [])
+        if any("pytest" in dep for dep in main_deps):
+            test_requires.append("pytest")
+
+    return test_requires
 
 
 def build_extra_section(toml: dict) -> dict | None:

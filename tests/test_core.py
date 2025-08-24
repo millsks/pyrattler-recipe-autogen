@@ -659,6 +659,188 @@ def test_build_test_section():
     assert result["commands"] == ["mypackage --help"]
 
 
+def test_build_test_section_auto_detect_basic():
+    """Test auto-detection of basic test configuration."""
+    toml_data = {"project": {"name": "my-package", "dependencies": ["pytest>=6.0"]}}
+
+    result = build_test_section(toml_data)
+    assert result is not None
+    assert "python" in result
+    assert "imports" in result["python"]
+    assert "my_package" in result["python"]["imports"]
+    assert "pytest" in result["python"]["imports"]
+    assert "commands" in result["python"]
+    assert "python -m pytest" in result["python"]["commands"]
+
+
+def test_build_test_section_auto_detect_pytest_config():
+    """Test auto-detection when pytest is configured."""
+    toml_data = {
+        "project": {"name": "testpkg"},
+        "tool": {"pytest": {"ini_options": {"testpaths": "tests"}}},
+    }
+
+    result = build_test_section(toml_data)
+    assert result is not None
+    assert "python" in result
+    assert "commands" in result["python"]
+    assert "python -m pytest" in result["python"]["commands"]
+
+
+def test_build_test_section_auto_detect_optional_deps():
+    """Test auto-detection of test requirements from optional dependencies."""
+    toml_data = {
+        "project": {
+            "name": "testpkg",
+            "optional-dependencies": {
+                "test": ["pytest>=6.0", "coverage>=5.0"],
+                "dev": ["black", "isort"],
+            },
+        }
+    }
+
+    result = build_test_section(toml_data)
+    assert result is not None
+    assert "requires" in result
+    assert "pytest>=6.0" in result["requires"]
+    assert "coverage>=5.0" in result["requires"]
+    assert "black" in result["requires"]
+    assert "isort" in result["requires"]
+
+
+def test_build_test_section_auto_detect_unittest():
+    """Test auto-detection with unittest."""
+    toml_data = {
+        "project": {"name": "testpkg", "dependencies": ["unittest-xml-reporting"]}
+    }
+
+    result = build_test_section(toml_data)
+    assert result is not None
+    assert "python" in result
+    assert "commands" in result["python"]
+    assert "python -m unittest discover" in result["python"]["commands"]
+
+
+def test_build_test_section_auto_detect_hatch_scripts():
+    """Test auto-detection of hatch test scripts."""
+    toml_data = {
+        "project": {"name": "testpkg"},
+        "tool": {
+            "hatch": {
+                "envs": {
+                    "test": {
+                        "scripts": {
+                            "run": "pytest tests/",
+                            "cov": "pytest --cov=src tests/",
+                        }
+                    }
+                }
+            }
+        },
+    }
+
+    result = build_test_section(toml_data)
+    assert result is not None
+    assert "python" in result
+    assert "commands" in result["python"]
+    commands = result["python"]["commands"]
+    assert "pytest tests/" in commands
+    assert "pytest --cov=src tests/" in commands
+
+
+def test_build_test_section_no_auto_detect_with_explicit():
+    """Test that explicit configuration takes precedence over auto-detection."""
+    toml_data = {
+        "project": {"name": "testpkg", "dependencies": ["pytest>=6.0"]},
+        "tool": {"conda": {"recipe": {"test": {"imports": ["explicit_import"]}}}},
+    }
+
+    result = build_test_section(toml_data)
+    assert result is not None
+    assert result["imports"] == ["explicit_import"]
+    # Should not have auto-detected content
+    assert "python" not in result or "commands" not in result.get("python", {})
+
+
+def test_detect_test_imports():
+    """Test detection of test imports."""
+    from pyrattler_recipe_autogen.core import _detect_test_imports
+
+    toml_data = {
+        "project": {
+            "name": "my-awesome-package",
+            "dependencies": ["pytest", "numpy"],
+            "optional-dependencies": {"test": ["unittest2"], "testing": ["nose2"]},
+        }
+    }
+
+    imports = _detect_test_imports(toml_data)
+    assert "my_awesome_package" in imports
+    assert "pytest" in imports
+    assert "unittest2" in imports
+    assert "nose2" in imports
+    # Should not include numpy (not a test package)
+    assert "numpy" not in imports
+
+
+def test_detect_test_commands_complex():
+    """Test detection of test commands from various sources."""
+    from pyrattler_recipe_autogen.core import _detect_test_commands
+
+    toml_data = {
+        "project": {
+            "name": "testpkg",
+            "dependencies": ["pytest>=6.0"],
+            "scripts": {"test": "pytest --verbose", "lint": "flake8"},
+        },
+        "tool": {
+            "pytest": {"ini_options": {"testpaths": "tests"}},
+            "hatch": {
+                "envs": {
+                    "test": {
+                        "scripts": {
+                            "unit": "pytest tests/unit/",
+                            "integration": "pytest tests/integration/",
+                        }
+                    }
+                }
+            },
+        },
+    }
+
+    commands = _detect_test_commands(toml_data)
+    assert "python -m pytest" in commands
+    assert "python -m pytest --verbose" in commands
+    assert "pytest tests/unit/" in commands
+    assert "pytest tests/integration/" in commands
+
+
+def test_detect_test_requirements_various_groups():
+    """Test detection of test requirements from various optional dependency groups."""
+    from pyrattler_recipe_autogen.core import _detect_test_requirements
+
+    toml_data = {
+        "project": {
+            "name": "testpkg",
+            "optional-dependencies": {
+                "test": ["pytest>=6.0", "pytest-cov"],
+                "testing": ["hypothesis"],
+                "dev": ["black", "isort"],
+                "docs": ["sphinx"],  # Should not be included
+            },
+        }
+    }
+
+    requires = _detect_test_requirements(toml_data)
+    assert "pytest>=6.0" in requires
+    assert "pytest-cov" in requires
+    assert "hypothesis" in requires
+    assert "black" in requires
+    assert "isort" in requires
+    # Should not include docs dependencies
+    assert "sphinx" not in requires
+
+
 def test_build_extra_section():
     """Test building extra section."""
     assert build_extra_section({}) is None
