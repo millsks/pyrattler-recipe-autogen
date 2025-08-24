@@ -4,7 +4,7 @@ Automatically generates recipe.yaml files for rattler-build directly from your P
 Features intelligent auto-detection, advanced dependency management, and comprehensive integration support.
 
 [![Test Coverage](https://img.shields.io/badge/coverage-97%25-brightgreen)](https://github.com/millsks/pyrattler-recipe-autogen)
-[![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)](https://python.org)
+[![Python Version](https://img.shields.io/badge/python-3.9%E2%80%933.13-blue)](https://python.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 ## ✨ Features
