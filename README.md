@@ -109,6 +109,42 @@ pyrattler-recipe-autogen -i path/to/pyproject.toml -o path/to/recipe.yaml
 pyrattler-recipe-autogen --overwrite
 ```
 
+### 🎮 Try the Demo
+
+**Want to see what pyrattler-recipe-autogen can do?** Try the interactive demo:
+
+```bash
+# Run all demos (shows simple, scientific, webapp, and current project)
+python -m pyrattler_recipe_autogen.demo
+
+# Try specific package types
+python -m pyrattler_recipe_autogen.demo --type simple
+python -m pyrattler_recipe_autogen.demo --type scientific
+python -m pyrattler_recipe_autogen.demo --type webapp
+
+# Analyze the current project
+python -m pyrattler_recipe_autogen.demo --type current
+
+# See complete recipes (instead of previews)
+python -m pyrattler_recipe_autogen.demo --full
+```
+
+**With pixi** (if you have the source):
+
+```bash
+pixi run demo          # All demos
+pixi run demo-simple   # Simple package demo
+pixi run demo-current  # Current project demo
+pixi run demo-full     # Full output
+```
+
+The demo shows how the tool works with:
+
+- 🔧 **Simple packages**: Basic Python projects with standard dependencies
+- 🔬 **Scientific packages**: NumPy/SciPy/matplotlib-based projects
+- 🌐 **Web applications**: FastAPI/Django-style projects
+- 📦 **Real projects**: Analysis of actual pyproject.toml files
+
 ### Programmatic API
 
 Basic recipe generation:

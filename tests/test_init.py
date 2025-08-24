@@ -89,6 +89,11 @@ def test_all_exports():
         "load_pyproject_toml",
         "resolve_dynamic_version",
         "write_recipe_yaml",
+        # Demo functions
+        "run_demo",
+        "demo_simple_package",
+        "demo_scientific_package",
+        "demo_webapp_package",
     ]
 
     assert hasattr(pyrattler_recipe_autogen, "__all__")

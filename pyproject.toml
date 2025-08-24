@@ -15,7 +15,9 @@ requires-python = ">=3.9"
 dependencies = [
     "pyyaml",
     "tomli; python_version < '3.11'",
+    "toml",  # For writing TOML in demo module
     "types-PyYAML",  # Type stubs for PyYAML
+    "types-toml",    # Type stubs for toml
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -108,7 +110,7 @@ exclude = [
 ]
 
 [[tool.mypy.overrides]]
-module = ["setuptools_scm", "tomli", "tomllib"]
+module = ["setuptools_scm", "tomli", "tomllib", "toml"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
@@ -183,6 +185,14 @@ lint = { features = ["lint"], solve-group = "default" }
 # Main CLI command for testing
 generate-recipe = "python -m pyrattler_recipe_autogen.cli"
 
+# Demo functionality
+demo = "python -m pyrattler_recipe_autogen.demo"
+demo-simple = "python -m pyrattler_recipe_autogen.demo --type simple"
+demo-scientific = "python -m pyrattler_recipe_autogen.demo --type scientific"
+demo-webapp = "python -m pyrattler_recipe_autogen.demo --type webapp"
+demo-current = "python -m pyrattler_recipe_autogen.demo --type current"
+demo-full = "python -m pyrattler_recipe_autogen.demo --full"
+
 # Version management
 version = "python -c 'import pyrattler_recipe_autogen; print(pyrattler_recipe_autogen.__version__)'"
 
@@ -197,6 +207,9 @@ pre-commit-run = "pre-commit run --all-files"
 
 # Development workflow
 dev-setup = { depends-on = ["pre-commit-install"] }
+
+[tool.pixi.dependencies]
+types-toml = ">=0.10.8.20240310,<0.11"
 
 [tool.pixi.feature.test.tasks]
 test = "pytest tests/"

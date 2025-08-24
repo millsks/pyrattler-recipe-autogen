@@ -27,6 +27,14 @@ from .core import (
     write_recipe_yaml,
 )
 
+# Demo functionality
+from .demo import (
+    demo_scientific_package,
+    demo_simple_package,
+    demo_webapp_package,
+    run_demo,
+)
+
 __all__ = [
     "__version__",
     "assemble_recipe",
@@ -42,4 +50,9 @@ __all__ = [
     "load_pyproject_toml",
     "resolve_dynamic_version",
     "write_recipe_yaml",
+    # Demo functions
+    "run_demo",
+    "demo_simple_package",
+    "demo_scientific_package",
+    "demo_webapp_package",
 ]
