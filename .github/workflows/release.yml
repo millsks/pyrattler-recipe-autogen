@@ -138,11 +138,36 @@ jobs:
       - name: Generate release notes
         id: release_notes
         run: |
-          NOTES="Release v${{ inputs.version }}\n\n          ## Changes in this release\n          \n          ### Package Information\n          - Version: ${{ inputs.version }}\n          - Build date: $(date)\n          - Commit: ${{ github.sha }}\n          \n          ### Quality Metrics\n          - All tests passed ✅\n          - Security checks passed ✅\n          - Type checking passed ✅\n          - Linting passed ✅\n          \n          ## Installation\n          \n          \`\`\`bash\n          pip install pyrattler-recipe-autogen==${{ inputs.version }}\n          \`\`\`\n          \n          ## Verification\n          \n          \`\`\`bash\n          python -c \"import pyrattler_recipe_autogen; print(pyrattler_recipe_autogen.__version__)\"\n          \`\`\`"
+          cat << EOF >> $GITHUB_OUTPUT
+          notes<<RELEASE_NOTES
+          Release v${{ inputs.version }}
 
-          echo "notes<<EOF" >> $GITHUB_OUTPUT
-          echo "$NOTES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          ## Changes in this release
+
+          ### Package Information
+          - Version: ${{ inputs.version }}
+          - Build date: $(date)
+          - Commit: ${{ github.sha }}
+
+          ### Quality Metrics
+          - All tests passed ✅
+          - Security checks passed ✅
+          - Type checking passed ✅
+          - Linting passed ✅
+
+          ## Installation
+
+          \`\`\`bash
+          pip install pyrattler-recipe-autogen==${{ inputs.version }}
+          \`\`\`
+
+          ## Verification
+
+          \`\`\`bash
+          python -c "import pyrattler_recipe_autogen; print(pyrattler_recipe_autogen.__version__)"
+          \`\`\`
+          RELEASE_NOTES
+          EOF
 
       - name: Create GitHub Release
         id: create_release
