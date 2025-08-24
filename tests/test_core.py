@@ -1450,7 +1450,7 @@ def test_write_recipe_yaml_backup_existing():
             pass
 
 
-@patch("pyrattler_recipe_autogen.core.write_recipe_yaml")
+@patch("pyrattler_recipe_autogen.core.write_recipe_with_config")
 @patch("pyrattler_recipe_autogen.core.load_pyproject_toml")
 def test_generate_recipe(mock_load, mock_write):
     """Test the main generate_recipe function."""
@@ -2155,6 +2155,334 @@ def test_build_context_section_enhanced():
         assert result["dependency_count"] == 1
         assert result["has_dev_dependencies"] is True
         assert "pytest" in result["configured_tools"]
+
+
+# Tests for Output Customization (Enhancement 6)
+
+
+def test_output_config_initialization():
+    """Test OutputConfig initialization with default values."""
+    from pyrattler_recipe_autogen.core import OutputConfig
+
+    config = OutputConfig()
+
+    assert config.output_format == "yaml"
+    assert config.yaml_style == "default"
+    assert config.include_comments is True
+    assert config.sort_keys is False
+    assert config.indent == 2
+    assert config.validate_output is True
+    assert config.include_sections == []
+    assert config.exclude_sections == []
+    assert config.custom_templates == {}
+    assert config.json_indent == 2
+
+
+def test_output_config_custom_values():
+    """Test OutputConfig with custom values."""
+    from pyrattler_recipe_autogen.core import OutputConfig
+
+    config = OutputConfig(
+        output_format="json",
+        yaml_style="block",
+        include_comments=False,
+        sort_keys=True,
+        indent=4,
+        validate_output=False,
+        include_sections=["package", "build"],
+        exclude_sections=["test"],
+        custom_templates={"package": "custom template"},
+        json_indent=4,
+    )
+
+    assert config.output_format == "json"
+    assert config.yaml_style == "block"
+    assert config.include_comments is False
+    assert config.sort_keys is True
+    assert config.indent == 4
+    assert config.validate_output is False
+    assert config.include_sections == ["package", "build"]
+    assert config.exclude_sections == ["test"]
+    assert config.custom_templates == {"package": "custom template"}
+    assert config.json_indent == 4
+
+
+def test_apply_output_customizations():
+    """Test applying output customizations to recipe dictionary."""
+    from pyrattler_recipe_autogen.core import OutputConfig, _apply_output_customizations
+
+    recipe_dict = {
+        "package": {"name": "test", "version": "1.0"},
+        "build": {"script": "pip install ."},
+        "requirements": {"run": ["python"]},
+        "test": {"commands": ["pytest"]},
+    }
+
+    # Test section inclusion
+    config = OutputConfig(include_sections=["package", "build"])
+    result = _apply_output_customizations(recipe_dict, config)
+
+    assert "package" in result
+    assert "build" in result
+    assert "requirements" not in result
+    assert "test" not in result
+
+
+def test_apply_output_customizations_exclusion():
+    """Test section exclusion in output customizations."""
+    from pyrattler_recipe_autogen.core import OutputConfig, _apply_output_customizations
+
+    recipe_dict = {
+        "package": {"name": "test", "version": "1.0"},
+        "build": {"script": "pip install ."},
+        "requirements": {"run": ["python"]},
+        "test": {"commands": ["pytest"]},
+    }
+
+    # Test section exclusion
+    config = OutputConfig(exclude_sections=["test"])
+    result = _apply_output_customizations(recipe_dict, config)
+
+    assert "package" in result
+    assert "build" in result
+    assert "requirements" in result
+    assert "test" not in result
+
+
+def test_validate_recipe_output():
+    """Test recipe output validation."""
+    import io
+    import sys
+
+    from pyrattler_recipe_autogen.core import OutputConfig, _validate_recipe_output
+
+    # Capture stdout to check warning messages
+    captured_output = io.StringIO()
+    sys.stdout = captured_output
+
+    # Test with missing required sections
+    recipe_dict = {
+        "package": {"name": "test"}  # Missing version
+    }
+
+    config = OutputConfig()
+    _validate_recipe_output(recipe_dict, config)
+
+    # Restore stdout
+    sys.stdout = sys.__stdout__
+    output = captured_output.getvalue()
+
+    assert "Missing recommended sections" in output
+    assert "Package version is missing" in output
+
+
+def test_find_template_references():
+    """Test finding template variable references."""
+    from pyrattler_recipe_autogen.core import _find_template_references
+
+    recipe_dict = {
+        "package": {"name": "${{ name }}", "version": "${{ version }}"},
+        "build": {"script": "pip install . --prefix=${{ prefix }}"},
+        "requirements": {"run": ["python >=${{ python_min }}"]},
+    }
+
+    refs = _find_template_references(recipe_dict)
+    expected_refs = {"name", "version", "prefix", "python_min"}
+
+    assert refs == expected_refs
+
+
+def test_validate_context_variables():
+    """Test context variable validation."""
+    import io
+    import sys
+
+    from pyrattler_recipe_autogen.core import _validate_context_variables
+
+    # Capture stdout to check messages
+    captured_output = io.StringIO()
+    sys.stdout = captured_output
+
+    recipe_dict = {
+        "context": {"name": "test-package", "version": "1.0.0", "unused_var": "unused"},
+        "package": {"name": "${{ name }}", "version": "${{ version }}"},
+        "build": {"script": "echo ${{ undefined_var }}"},
+    }
+
+    _validate_context_variables(recipe_dict)
+
+    # Restore stdout
+    sys.stdout = sys.__stdout__
+    output = captured_output.getvalue()
+
+    assert "Undefined context variables: undefined_var" in output
+    assert "Unused context variables: unused_var" in output
+
+
+def test_write_yaml_output():
+    """Test YAML output writing with configuration."""
+    import tempfile
+
+    from pyrattler_recipe_autogen.core import OutputConfig, _write_yaml_output
+
+    recipe_dict = {
+        "package": {"name": "test", "version": "1.0"},
+        "build": {"script": "pip install ."},
+    }
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as tmp:
+        tmp_path = pathlib.Path(tmp.name)
+
+    try:
+        config = OutputConfig(sort_keys=True, indent=4)
+        _write_yaml_output(recipe_dict, tmp_path, config)
+
+        # Verify file was written
+        assert tmp_path.exists()
+
+        # Verify content
+        with tmp_path.open("r") as f:
+            content = f.read()
+            assert "name: test" in content
+            assert "version: '1.0'" in content or "version: 1.0" in content
+    finally:
+        if tmp_path.exists():
+            tmp_path.unlink()
+
+
+def test_write_json_output():
+    """Test JSON output writing with configuration."""
+    import json
+    import tempfile
+
+    from pyrattler_recipe_autogen.core import OutputConfig, _write_json_output
+
+    recipe_dict = {
+        "package": {"name": "test", "version": "1.0"},
+        "build": {"script": "pip install ."},
+    }
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as tmp:
+        tmp_path = pathlib.Path(tmp.name)
+
+    try:
+        config = OutputConfig(json_indent=4, sort_keys=True)
+        _write_json_output(recipe_dict, tmp_path, config)
+
+        # Should change extension to .json
+        json_path = tmp_path.with_suffix(".json")
+        assert json_path.exists()
+
+        # Verify content
+        with json_path.open("r") as f:
+            loaded_data = json.load(f)
+            assert loaded_data["package"]["name"] == "test"
+            assert loaded_data["package"]["version"] == "1.0"
+
+        # Cleanup json file too
+        json_path.unlink()
+    finally:
+        if tmp_path.exists():
+            tmp_path.unlink()
+
+
+def test_load_output_config():
+    """Test loading output configuration from pyproject.toml."""
+    from pyrattler_recipe_autogen.core import _load_output_config
+
+    # Test with custom output configuration
+    toml_data = {
+        "tool": {
+            "conda": {
+                "recipe": {
+                    "output": {
+                        "format": "json",
+                        "yaml_style": "block",
+                        "include_comments": False,
+                        "sort_keys": True,
+                        "indent": 4,
+                        "validate_output": False,
+                        "include_sections": ["package", "build"],
+                        "exclude_sections": ["test"],
+                        "json_indent": 4,
+                    }
+                }
+            }
+        }
+    }
+
+    config = _load_output_config(toml_data)
+
+    assert config.output_format == "json"
+    assert config.yaml_style == "block"
+    assert config.include_comments is False
+    assert config.sort_keys is True
+    assert config.indent == 4
+    assert config.validate_output is False
+    assert config.include_sections == ["package", "build"]
+    assert config.exclude_sections == ["test"]
+    assert config.json_indent == 4
+
+
+def test_load_output_config_defaults():
+    """Test loading output configuration with defaults."""
+    from pyrattler_recipe_autogen.core import _load_output_config
+
+    # Test with no output configuration
+    toml_data = {}
+
+    config = _load_output_config(toml_data)
+
+    assert config.output_format == "yaml"
+    assert config.yaml_style == "default"
+    assert config.include_comments is True
+    assert config.sort_keys is False
+    assert config.indent == 2
+    assert config.validate_output is True
+
+
+def test_generate_recipe_with_config():
+    """Test recipe generation with custom configuration."""
+    import tempfile
+
+    from pyrattler_recipe_autogen.core import OutputConfig, generate_recipe_with_config
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = pathlib.Path(temp_dir)
+
+        # Create a test pyproject.toml
+        pyproject_path = temp_path / "pyproject.toml"
+        pyproject_content = """
+[project]
+name = "test-package"
+version = "1.0.0"
+dependencies = ["requests"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+"""
+        pyproject_path.write_text(pyproject_content)
+
+        # Test with JSON output configuration
+        output_path = temp_path / "recipe.yaml"
+        config = OutputConfig(
+            output_format="json", sort_keys=True, exclude_sections=["test"]
+        )
+
+        generate_recipe_with_config(pyproject_path, output_path, config)
+
+        # Should create JSON file
+        json_path = output_path.with_suffix(".json")
+        assert json_path.exists()
+
+        # Verify content
+        import json
+
+        with json_path.open("r") as f:
+            recipe_data = json.load(f)
+            assert recipe_data["package"]["name"] == "${{ name }}"
+            assert "test" not in recipe_data  # Should be excluded
 
 
 if __name__ == "__main__":

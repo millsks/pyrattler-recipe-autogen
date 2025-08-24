@@ -1724,6 +1724,26 @@ def write_recipe_yaml(
         output_path: Path where to write the recipe.yaml
         overwrite: If True, overwrite existing files. If False, backup existing files.
     """
+    # Use enhanced output customization
+    output_config = OutputConfig()
+    write_recipe_with_config(recipe_dict, output_path, output_config, overwrite)
+
+
+def write_recipe_with_config(
+    recipe_dict: dict,
+    output_path: pathlib.Path,
+    config: OutputConfig,
+    overwrite: bool = False,
+) -> None:
+    """
+    Write the recipe dictionary to a file with customization options.
+
+    Args:
+        recipe_dict: The recipe dictionary to write
+        output_path: Path where to write the recipe file
+        config: Output configuration options
+        overwrite: If True, overwrite existing files. If False, backup existing files.
+    """
     # Create parent directories if they don't exist
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -1733,8 +1753,227 @@ def write_recipe_yaml(
         output_path.replace(backup_path)
         print(f"⚠ Existing {output_path} backed up to {backup_path}")
 
+    # Apply output customizations
+    customized_recipe = _apply_output_customizations(recipe_dict, config)
+
+    # Validate output if requested
+    if config.validate_output:
+        _validate_recipe_output(customized_recipe, config)
+
+    # Write in the specified format
+    if config.output_format == "yaml":
+        _write_yaml_output(customized_recipe, output_path, config)
+    elif config.output_format == "json":
+        _write_json_output(customized_recipe, output_path, config)
+    else:
+        raise ValueError(f"Unsupported output format: {config.output_format}")
+
+
+class OutputConfig:
+    """Configuration class for output customization."""
+
+    def __init__(
+        self,
+        output_format: str = "yaml",
+        yaml_style: str = "default",
+        include_comments: bool = True,
+        sort_keys: bool = False,
+        indent: int = 2,
+        validate_output: bool = True,
+        include_sections: list[str] | None = None,
+        exclude_sections: list[str] | None = None,
+        custom_templates: dict[str, str] | None = None,
+        json_indent: int = 2,
+    ):
+        """
+        Initialize output configuration.
+
+        Args:
+            output_format: Output format ('yaml' or 'json')
+            yaml_style: YAML style ('default', 'block', 'flow')
+            include_comments: Whether to include helpful comments
+            sort_keys: Whether to sort dictionary keys
+            indent: Number of spaces for indentation
+            validate_output: Whether to validate the output
+            include_sections: Specific sections to include (None = all)
+            exclude_sections: Sections to exclude
+            custom_templates: Custom templates for sections
+            json_indent: Indentation for JSON output
+        """
+        self.output_format = output_format
+        self.yaml_style = yaml_style
+        self.include_comments = include_comments
+        self.sort_keys = sort_keys
+        self.indent = indent
+        self.validate_output = validate_output
+        self.include_sections = include_sections or []
+        self.exclude_sections = exclude_sections or []
+        self.custom_templates = custom_templates or {}
+        self.json_indent = json_indent
+
+
+def _apply_output_customizations(recipe_dict: dict, config: OutputConfig) -> dict:
+    """Apply output customizations to the recipe dictionary."""
+    result = recipe_dict.copy()
+
+    # Apply section filtering
+    if config.include_sections:
+        # Only include specified sections
+        filtered = {}
+        for section in config.include_sections:
+            if section in result:
+                filtered[section] = result[section]
+        result = filtered
+
+    if config.exclude_sections:
+        # Exclude specified sections
+        for section in config.exclude_sections:
+            result.pop(section, None)
+
+    # Apply custom templates
+    for section, template in config.custom_templates.items():
+        if section in result:
+            result[section] = _apply_template(result[section], template)
+
+    # Add helpful comments if requested
+    if config.include_comments:
+        result = _add_helpful_comments(result)
+
+    return result
+
+
+def _apply_template(section_data: _t.Any, template: str) -> _t.Any:
+    """Apply a custom template to section data."""
+    # For now, return the original data
+    # This could be enhanced to support template substitution
+    return section_data
+
+
+def _add_helpful_comments(recipe_dict: dict) -> dict:
+    """Add helpful comments to the recipe dictionary."""
+    # YAML comments would require a different YAML library (like ruamel.yaml)
+    # For now, we'll add special comment keys that could be processed later
+    commented = recipe_dict.copy()
+
+    # Add helpful metadata
+    if "context" in commented:
+        # Could add comments about context variable usage
+        pass
+
+    if "requirements" in commented:
+        # Could add comments about requirement sources
+        pass
+
+    return commented
+
+
+def _validate_recipe_output(recipe_dict: dict, _config: OutputConfig) -> None:
+    """Validate the recipe output against known schema requirements."""
+    required_sections = ["package", "source", "build", "requirements"]
+    missing_sections = []
+
+    for section in required_sections:
+        if section not in recipe_dict:
+            missing_sections.append(section)
+
+    if missing_sections:
+        print(f"⚠ Warning: Missing recommended sections: {', '.join(missing_sections)}")
+
+    # Validate package section
+    if "package" in recipe_dict:
+        package = recipe_dict["package"]
+        if not package.get("name"):
+            print("⚠ Warning: Package name is missing")
+        if not package.get("version"):
+            print("⚠ Warning: Package version is missing")
+
+    # Validate context variables
+    if "context" in recipe_dict:
+        _validate_context_variables(recipe_dict)
+
+
+def _validate_context_variables(recipe_dict: dict) -> None:
+    """Validate that context variables are properly referenced."""
+    context = recipe_dict.get("context", {})
+    context_vars = set(context.keys())
+
+    # Find template references in the recipe
+    template_refs = _find_template_references(recipe_dict)
+
+    # Check for undefined context variables
+    undefined_vars = template_refs - context_vars
+    if undefined_vars:
+        print(f"⚠ Warning: Undefined context variables: {', '.join(undefined_vars)}")
+
+    # Check for unused context variables
+    unused_vars = context_vars - template_refs
+    if unused_vars:
+        print(f"ℹ Info: Unused context variables: {', '.join(unused_vars)}")
+
+
+def _find_template_references(obj: _t.Any, refs: set[str] | None = None) -> set[str]:
+    """Find all template variable references in the recipe."""
+    if refs is None:
+        refs = set()
+
+    if isinstance(obj, str):
+        # Find ${{ variable }} patterns
+        import re
+
+        pattern = r"\$\{\{\s*(\w+)\s*\}\}"
+        matches = re.findall(pattern, obj)
+        refs.update(matches)
+    elif isinstance(obj, dict):
+        for value in obj.values():
+            _find_template_references(value, refs)
+    elif isinstance(obj, list):
+        for item in obj:
+            _find_template_references(item, refs)
+
+    return refs
+
+
+def _write_yaml_output(
+    recipe_dict: dict, output_path: pathlib.Path, config: OutputConfig
+) -> None:
+    """Write recipe as YAML with custom formatting."""
     with output_path.open("w", encoding="utf-8") as fh:
-        yaml.safe_dump(recipe_dict, fh, sort_keys=False)
+        if config.yaml_style == "block":
+            yaml.safe_dump(
+                recipe_dict,
+                fh,
+                default_flow_style=False,
+                sort_keys=config.sort_keys,
+                indent=config.indent,
+            )
+        else:
+            yaml.safe_dump(
+                recipe_dict,
+                fh,
+                default_flow_style=(config.yaml_style == "flow"),
+                sort_keys=config.sort_keys,
+                indent=config.indent,
+            )
+
+
+def _write_json_output(
+    recipe_dict: dict, output_path: pathlib.Path, config: OutputConfig
+) -> None:
+    """Write recipe as JSON with custom formatting."""
+    import json
+
+    # Change extension to .json if it's .yaml/.yml
+    if output_path.suffix.lower() in [".yaml", ".yml"]:
+        output_path = output_path.with_suffix(".json")
+
+    with output_path.open("w", encoding="utf-8") as fh:
+        json.dump(
+            recipe_dict,
+            fh,
+            indent=config.json_indent,
+            sort_keys=config.sort_keys,
+            ensure_ascii=False,
+        )
 
 
 def generate_recipe(
@@ -1750,5 +1989,50 @@ def generate_recipe(
     """
     toml_data = load_pyproject_toml(pyproject_path)
     recipe_dict = assemble_recipe(toml_data, pyproject_path.parent, output_path.parent)
-    write_recipe_yaml(recipe_dict, output_path, overwrite)
+
+    # Check for output customization configuration
+    output_config = _load_output_config(toml_data)
+
+    write_recipe_with_config(recipe_dict, output_path, output_config, overwrite)
     print(f"✔ Wrote {output_path}")
+
+
+def generate_recipe_with_config(
+    pyproject_path: pathlib.Path,
+    output_path: pathlib.Path,
+    config: OutputConfig,
+    overwrite: bool = False,
+) -> None:
+    """
+    Generate a Rattler-Build recipe with custom output configuration.
+
+    Args:
+        pyproject_path: Path to the input pyproject.toml file
+        output_path: Path for the output recipe file
+        config: Output configuration options
+        overwrite: Whether to overwrite existing output files
+    """
+    toml_data = load_pyproject_toml(pyproject_path)
+    recipe_dict = assemble_recipe(toml_data, pyproject_path.parent, output_path.parent)
+
+    write_recipe_with_config(recipe_dict, output_path, config, overwrite)
+    print(f"✔ Wrote {output_path} with custom configuration")
+
+
+def _load_output_config(toml_data: dict) -> OutputConfig:
+    """Load output configuration from pyproject.toml."""
+    # Check for output customization in tool.conda.recipe.output
+    output_settings = _toml_get(toml_data, "tool.conda.recipe.output", {})
+
+    return OutputConfig(
+        output_format=output_settings.get("format", "yaml"),
+        yaml_style=output_settings.get("yaml_style", "default"),
+        include_comments=output_settings.get("include_comments", True),
+        sort_keys=output_settings.get("sort_keys", False),
+        indent=output_settings.get("indent", 2),
+        validate_output=output_settings.get("validate_output", True),
+        include_sections=output_settings.get("include_sections"),
+        exclude_sections=output_settings.get("exclude_sections"),
+        custom_templates=output_settings.get("custom_templates"),
+        json_indent=output_settings.get("json_indent", 2),
+    )
