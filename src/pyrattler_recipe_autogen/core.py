@@ -32,6 +32,7 @@ import re
 import subprocess
 import sys
 import typing as _t
+from typing import Union
 
 try:
     import tomllib  # Python ≥3.11
@@ -448,8 +449,86 @@ def build_build_section(toml: dict) -> dict:
     return _t.cast(dict, section)
 
 
+def _convert_python_version_marker(dep_name: str, marker: str) -> dict | str:
+    """Convert Python version markers to conda selectors."""
+    if "python_version" in marker:
+        if "<" in marker:
+            # Extract version like python_version < "3.11"
+            version_match = re.search(r'["\'](\d+\.\d+)["\']', marker)
+            if version_match:
+                version = version_match.group(1)
+                version_no_dot = version.replace(".", "")
+                return {"if": f"py<{version_no_dot}", "then": [dep_name]}
+        elif ">=" in marker:
+            # Extract version like python_version >= "3.11"
+            version_match = re.search(r'["\'](\d+\.\d+)["\']', marker)
+            if version_match:
+                version = version_match.group(1)
+                version_no_dot = version.replace(".", "")
+                return {"if": f"py>={version_no_dot}", "then": [dep_name]}
+
+    # For unsupported markers, include the dependency unconditionally with a warning
+    _warn(
+        f"Unsupported environment marker '{marker}' for dependency '{dep_name}', including unconditionally"
+    )
+    return dep_name
+
+
+def _process_conditional_dependencies(deps: list[str]) -> list[str | dict]:
+    """Process dependencies with environment markers and convert to conda selectors."""
+    processed_deps = []
+
+    for dep in deps:
+        if ";" in dep:  # Environment marker
+            dep_name, marker = dep.split(";", 1)
+            dep_name = dep_name.strip()
+            marker = marker.strip()
+
+            converted = _convert_python_version_marker(dep_name, marker)
+            processed_deps.append(converted)
+        else:
+            processed_deps.append(dep)
+
+    return processed_deps
+
+
+def _process_optional_dependencies(
+    optional_deps: dict, context: dict
+) -> dict[str, list[str | dict]]:
+    """Process optional dependencies for potential use in outputs or variants."""
+    processed = {}
+
+    for extra_name, extra_deps in optional_deps.items():
+        # Normalize the dependencies
+        normalized_deps = _normalize_deps(extra_deps)
+        # Process conditional dependencies
+        processed_deps = _process_conditional_dependencies(normalized_deps)
+        processed[extra_name] = processed_deps
+
+    return processed
+
+
+def _dedupe_mixed_requirements(
+    combined: list[str | dict],
+) -> list[str | dict]:
+    """Deduplicate requirements list containing both strings and dicts."""
+    seen = set()
+    deduped: list[str | dict] = []
+
+    for item in combined:
+        if isinstance(item, str):
+            if item not in seen:
+                seen.add(item)
+                deduped.append(item)
+        else:
+            # For dict items (selectors), include them as-is
+            deduped.append(item)
+
+    return deduped
+
+
 def build_requirements_section(toml: dict, context: dict) -> dict:
-    """Build the requirements section of the recipe."""
+    """Build the requirements section with enhanced dependency handling."""
     # Get python_min and python_max from context for consistent python version handling
     python_min = context.get("python_min", "")
     python_max = context.get("python_max", "")
@@ -462,34 +541,60 @@ def build_requirements_section(toml: dict, context: dict) -> dict:
     else:
         python_spec = "python"
 
-    reqs: dict[str, list[str]] = {"build": [], "host": [], "run": []}
+    reqs: dict[str, list[str | dict]] = {"build": [], "host": [], "run": []}
 
     if "tool" in toml and "pixi" in toml["tool"]:
         pixi = toml["tool"]["pixi"]
         # Build deps - normalize from dict/list to list
         build_deps = pixi.get("feature", {}).get("build", {}).get("dependencies", {})
-        reqs["build"] = _normalize_deps(build_deps)
+        build_normalized = _t.cast(list[Union[str, dict]], _normalize_deps(build_deps))
+        reqs["build"] = build_normalized
         # Host deps - normalize from dict/list to list
         host_deps = pixi.get("host-dependencies", {})
-        reqs["host"] = _normalize_deps(host_deps)
-        reqs["host"].insert(0, python_spec)
+        host_normalized = _t.cast(list[Union[str, dict]], _normalize_deps(host_deps))
+        host_normalized.insert(0, python_spec)
+        reqs["host"] = host_normalized
     else:
         _warn(
             "Pixi configuration not found; `build` and `host` requirement sections "
             "must be provided via tool.conda.recipe.requirements"
         )
 
-    # Runtime deps from PEP 621
-    run_deps = _normalize_deps(toml["project"].get("dependencies", []))
-    run_deps.insert(0, python_spec)
-    reqs["run"] = run_deps
+    # Runtime deps from PEP 621 with enhanced processing
+    project = toml.get("project", {})
+    dependencies = project.get("dependencies", [])
+
+    # Process conditional dependencies
+    processed_run_deps = _process_conditional_dependencies(dependencies)
+    processed_run_deps.insert(0, python_spec)
+    reqs["run"] = processed_run_deps
+
+    # Store optional dependencies for potential use (not added to main requirements by default)
+    optional_deps = project.get("optional-dependencies", {})
+    if optional_deps:
+        # This could be used later for multi-output packages or variants
+        context["optional_dependencies"] = _process_optional_dependencies(
+            optional_deps, context
+        )
 
     # Allow recipe-specific overrides/additions
     recipe_reqs = _toml_get(toml, "tool.conda.recipe.requirements", {})
     for sec in ("build", "host", "run"):
         base_reqs = reqs.get(sec, [])
-        extra_reqs = _normalize_deps(recipe_reqs.get(sec, []))
-        reqs[sec] = list(dict.fromkeys(base_reqs + extra_reqs))  # dedupe & keep order
+        extra_reqs_normalized = _normalize_deps(recipe_reqs.get(sec, []))
+        # Process conditional dependencies for extra requirements too
+        if sec == "run":
+            extra_reqs_processed = _process_conditional_dependencies(
+                extra_reqs_normalized
+            )
+        else:
+            extra_reqs_processed = _t.cast(
+                list[Union[str, dict]], extra_reqs_normalized
+            )
+        # Combine and dedupe while preserving order and handling mixed types
+        combined = base_reqs + extra_reqs_processed
+        reqs[sec] = _dedupe_mixed_requirements(combined)
+
     return reqs
 
 

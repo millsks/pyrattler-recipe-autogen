@@ -491,6 +491,155 @@ def test_build_requirements_section_pixi():
     assert "pip" in result["host"]
 
 
+def test_build_requirements_section_conditional_deps():
+    """Test building requirements section with conditional dependencies."""
+    toml_data = {
+        "project": {
+            "dependencies": [
+                "tomli; python_version < '3.11'",
+                "requests>=2.0",
+                "numpy; python_version >= '3.9'",
+            ]
+        }
+    }
+    context = {"python_min": "3.8"}
+
+    result = build_requirements_section(toml_data, context)
+
+    # Should have python spec first
+    assert result["run"][0] == "python >=3.8"
+
+    # Should have conditional dependency for tomli
+    tomli_dep = None
+    numpy_dep = None
+    for dep in result["run"]:
+        if isinstance(dep, dict) and dep.get("if") == "py<311":
+            tomli_dep = dep
+        elif isinstance(dep, dict) and dep.get("if") == "py>=39":
+            numpy_dep = dep
+
+    assert tomli_dep is not None
+    assert tomli_dep["then"] == ["tomli"]
+    assert numpy_dep is not None
+    assert numpy_dep["then"] == ["numpy"]
+
+    # Should have unconditional dependency for requests
+    assert "requests>=2.0" in result["run"]
+
+
+def test_build_requirements_section_optional_deps():
+    """Test building requirements section with optional dependencies."""
+    toml_data = {
+        "project": {
+            "dependencies": ["requests"],
+            "optional-dependencies": {
+                "dev": ["pytest", "black"],
+                "docs": ["sphinx", "myst-parser"],
+            },
+        }
+    }
+    context = {"python_min": "3.8"}
+
+    result = build_requirements_section(toml_data, context)
+
+    # Optional dependencies should not be in main requirements
+    assert "pytest" not in result["run"]
+    assert "sphinx" not in result["run"]
+
+    # But should be stored in context for potential use
+    assert "optional_dependencies" in context
+    assert "dev" in context["optional_dependencies"]
+    assert "docs" in context["optional_dependencies"]
+    assert "pytest" in context["optional_dependencies"]["dev"]
+    assert "sphinx" in context["optional_dependencies"]["docs"]
+
+
+def test_convert_python_version_marker():
+    """Test _convert_python_version_marker helper function."""
+    from pyrattler_recipe_autogen.core import _convert_python_version_marker
+
+    # Test less than version
+    result = _convert_python_version_marker("tomli", 'python_version < "3.11"')
+    assert result == {"if": "py<311", "then": ["tomli"]}
+
+    # Test greater than or equal version
+    result = _convert_python_version_marker("numpy", 'python_version >= "3.9"')
+    assert result == {"if": "py>=39", "then": ["numpy"]}
+
+    # Test unsupported marker
+    with patch("pyrattler_recipe_autogen.core._warn") as mock_warn:
+        result = _convert_python_version_marker("package", "unsupported_marker")
+        assert result == "package"
+        mock_warn.assert_called_once()
+
+
+def test_process_conditional_dependencies():
+    """Test _process_conditional_dependencies helper function."""
+    from pyrattler_recipe_autogen.core import _process_conditional_dependencies
+
+    deps = [
+        "requests>=2.0",
+        "tomli; python_version < '3.11'",
+        "numpy; python_version >= '3.9'",
+    ]
+
+    result = _process_conditional_dependencies(deps)
+
+    # First dependency should be unchanged
+    assert result[0] == "requests>=2.0"
+
+    # Second should be converted to conditional
+    assert result[1] == {"if": "py<311", "then": ["tomli"]}
+
+    # Third should be converted to conditional
+    assert result[2] == {"if": "py>=39", "then": ["numpy"]}
+
+
+def test_process_optional_dependencies():
+    """Test _process_optional_dependencies helper function."""
+    from pyrattler_recipe_autogen.core import _process_optional_dependencies
+
+    optional_deps = {
+        "dev": ["pytest", "black; python_version >= '3.8'"],
+        "docs": ["sphinx"],
+    }
+    context = {}
+
+    result = _process_optional_dependencies(optional_deps, context)
+
+    assert "dev" in result
+    assert "docs" in result
+    assert "pytest" in result["dev"]
+    assert "sphinx" in result["docs"]
+    # The conditional dependency should be converted
+    assert {"if": "py>=38", "then": ["black"]} in result["dev"]
+
+
+def test_dedupe_mixed_requirements():
+    """Test _dedupe_mixed_requirements helper function."""
+    from pyrattler_recipe_autogen.core import _dedupe_mixed_requirements
+
+    mixed_reqs = [
+        "python>=3.8",
+        "requests",
+        {"if": "py<311", "then": ["tomli"]},
+        "requests",  # duplicate
+        {"if": "py>=39", "then": ["numpy"]},
+        "python>=3.8",  # duplicate
+    ]
+
+    result = _dedupe_mixed_requirements(mixed_reqs)
+
+    # Should dedupe strings but keep all dicts
+    string_items = [item for item in result if isinstance(item, str)]
+    dict_items = [item for item in result if isinstance(item, dict)]
+
+    assert len(string_items) == 2  # python>=3.8 and requests (deduped)
+    assert len(dict_items) == 2  # both conditional deps kept
+    assert "python>=3.8" in string_items
+    assert "requests" in string_items
+
+
 def test_build_test_section():
     """Test building test section."""
     assert build_test_section({}) is None
