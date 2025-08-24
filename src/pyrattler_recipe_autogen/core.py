@@ -225,7 +225,7 @@ def resolve_dynamic_version(project_root: pathlib.Path, toml: dict) -> str:
 
 
 def build_context_section(toml: dict, project_root: pathlib.Path) -> dict:
-    """Build the context section of the recipe."""
+    """Build the context section of the recipe with platform/variant support."""
     project = toml["project"]
 
     # Handle dynamic version
@@ -269,15 +269,263 @@ def build_context_section(toml: dict, project_root: pathlib.Path) -> dict:
     if python_max:
         context["python_max"] = python_max
 
+    # Add platform/variant context variables
+    platform_context = _detect_platform_variants(toml)
+    context.update(platform_context)
+
+    # Store optional dependencies for potential variant use
+    optional_deps = project.get("optional-dependencies", {})
+    if optional_deps:
+        context["optional_dependencies"] = optional_deps
+
     # Merge in extra context from tool.conda.recipe.extra_context
-    # This will override python_min if explicitly provided
+    # This will override any auto-detected values if explicitly provided
     extra_context = _toml_get(toml, "tool.conda.recipe.extra_context", {})
     context.update(extra_context)
 
     return context
 
 
-def build_package_section(toml: dict, project_root: pathlib.Path) -> dict:
+def _detect_platform_variants(toml: dict) -> dict[str, _t.Any]:
+    """Detect platform-specific variants and configurations."""
+    project = toml.get("project", {})
+    variants: dict[str, _t.Any] = {}
+
+    # Detect Python version variants
+    python_variants = _detect_python_variants(project)
+    if python_variants:
+        variants["python_variants"] = python_variants
+
+    # Detect platform-specific dependencies
+    platform_deps = _detect_platform_dependencies(project)
+    if platform_deps:
+        variants["platform_dependencies"] = platform_deps
+
+    # Detect architecture-specific configurations
+    arch_config = _detect_architecture_config(toml)
+    if arch_config:
+        variants.update(arch_config)
+
+    # Detect OS-specific configurations
+    os_config = _detect_os_config(project)
+    if os_config:
+        variants.update(os_config)
+
+    return variants
+
+
+def _detect_python_variants(project: dict) -> list[str]:
+    """Detect Python version variants from classifiers and requirements."""
+    python_versions = set()
+
+    # Extract from classifiers
+    classifier_versions = _extract_versions_from_classifiers(
+        project.get("classifiers", [])
+    )
+    python_versions.update(classifier_versions)
+
+    # Extract from requires-python
+    requires_versions = _extract_versions_from_requires(
+        project.get("requires-python", "")
+    )
+    python_versions.update(requires_versions)
+
+    # Sort versions numerically (not alphabetically)
+    return sorted(python_versions, key=lambda v: tuple(map(int, v.split("."))))
+
+
+def _extract_versions_from_classifiers(classifiers: list[str]) -> set[str]:
+    """Extract Python versions from project classifiers."""
+    versions = set()
+    for classifier in classifiers:
+        if "Programming Language :: Python ::" in classifier:
+            # Extract version like "Programming Language :: Python :: 3.9"
+            parts = classifier.split("::")
+            if len(parts) >= 3:
+                version_part = parts[-1].strip()
+                # Match versions like "3.9", "3.10", "3.11"
+                if re.match(r"^\d+\.\d+$", version_part):
+                    versions.add(version_part)
+    return versions
+
+
+def _extract_versions_from_requires(requires_python: str) -> set[str]:
+    """Extract Python versions from requires-python specification."""
+    if not requires_python:
+        return set()
+
+    versions = set()
+
+    # Parse version ranges like ">=3.8,<4.0" or ">=3.9"
+    min_match = re.search(r">=\s*(\d+)\.(\d+)", requires_python)
+    max_match = re.search(r"<\s*(\d+)\.(\d+)", requires_python)
+
+    if min_match:
+        min_major, min_minor = int(min_match.group(1)), int(min_match.group(2))
+        max_major, max_minor = 4, 0  # Default upper bound
+
+        if max_match:
+            max_major, max_minor = int(max_match.group(1)), int(max_match.group(2))
+
+        # Generate supported versions
+        versions.update(
+            _generate_version_range(min_major, min_minor, max_major, max_minor)
+        )
+
+    return versions
+
+
+def _generate_version_range(
+    min_major: int, min_minor: int, max_major: int, max_minor: int
+) -> set[str]:
+    """Generate Python version range between min and max versions."""
+    versions = set()
+    current_major, current_minor = min_major, min_minor
+
+    while (current_major, current_minor) < (max_major, max_minor):
+        versions.add(f"{current_major}.{current_minor}")
+        current_minor += 1
+        if current_minor > 12:  # Reasonable upper bound for minor versions
+            current_major += 1
+            current_minor = 0
+
+    return versions
+
+
+def _detect_platform_dependencies(project: dict) -> dict[str, list[str]]:
+    """Detect platform-specific dependencies from environment markers."""
+    platform_deps: dict[str, list[str]] = {}
+    dependencies = project.get("dependencies", [])
+
+    for dep in dependencies:
+        if ";" in dep:
+            platform_info = _parse_dependency_marker(dep)
+            if platform_info:
+                platform, dep_name = platform_info
+                if platform not in platform_deps:
+                    platform_deps[platform] = []
+                platform_deps[platform].append(dep_name)
+
+    return platform_deps
+
+
+def _parse_dependency_marker(dep: str) -> tuple[str, str] | None:
+    """Parse dependency with environment marker to extract platform and dependency name."""
+    if ";" not in dep:
+        return None  # No marker present
+
+    dep_name, marker = dep.split(";", 1)
+    dep_name = dep_name.strip()
+    marker = marker.strip()
+
+    # Parse platform-specific markers
+    if "sys_platform" in marker:
+        platform = _extract_platform_from_marker(marker)
+        if platform:
+            return platform, dep_name
+
+    elif "platform_machine" in marker:
+        arch = _extract_architecture_from_marker(marker)
+        if arch:
+            return f"arch_{arch}", dep_name
+
+    return None
+
+
+def _extract_platform_from_marker(marker: str) -> str | None:
+    """Extract platform from environment marker."""
+    # Handle markers like: sys_platform == "win32" or sys_platform == "darwin"
+    platform_match = re.search(r'sys_platform\s*==\s*["\']([^"\']+)["\']', marker)
+    if platform_match:
+        platform = platform_match.group(1)
+        # Map to conda platform names
+        platform_map = {"win32": "win", "darwin": "osx", "linux": "linux"}
+        return platform_map.get(platform, platform)
+    return None
+
+
+def _extract_architecture_from_marker(marker: str) -> str | None:
+    """Extract architecture from environment marker."""
+    # Handle markers like: platform_machine == "x86_64" or platform_machine == "aarch64"
+    arch_match = re.search(r'platform_machine\s*==\s*["\']([^"\']+)["\']', marker)
+    if arch_match:
+        arch = arch_match.group(1)
+        # Map to conda architecture names
+        arch_map = {
+            "x86_64": "64",
+            "amd64": "64",
+            "i386": "32",
+            "i686": "32",
+            "aarch64": "arm64",
+            "arm64": "arm64",
+        }
+        return arch_map.get(arch, arch)
+    return None
+
+
+def _detect_architecture_config(toml: dict) -> dict[str, _t.Any]:
+    """Detect architecture-specific configurations."""
+    config: dict[str, _t.Any] = {}
+
+    # Check for noarch configuration
+    build_system = toml.get("build-system", {})
+    if build_system.get("build-backend") in [
+        "flit_core.buildapi",
+        "poetry.core.masonry.api",
+    ]:
+        # Pure Python packages are typically noarch
+        config["noarch"] = "python"
+
+    # Check for C extensions or compiled code indicators
+    project = toml.get("project", {})
+    dependencies = project.get("dependencies", [])
+
+    # Look for indicators of compiled dependencies
+    compiled_deps = ["numpy", "scipy", "pandas", "tensorflow", "torch", "opencv"]
+    has_compiled = any(
+        any(comp_dep in dep for comp_dep in compiled_deps) for dep in dependencies
+    )
+
+    if has_compiled:
+        # Suggest architecture variants for compiled dependencies
+        config["arch_variants"] = ["64", "arm64"]
+
+    return config
+
+
+def _detect_os_config(project: dict) -> dict[str, _t.Any]:
+    """Detect OS-specific configurations."""
+    config: dict[str, _t.Any] = {}
+
+    # Look for OS-specific dependencies
+    classifiers = project.get("classifiers", [])
+    supported_os = set()
+
+    for classifier in classifiers:
+        if "Operating System ::" in classifier:
+            if "Microsoft :: Windows" in classifier:
+                supported_os.add("win")
+            elif "MacOS" in classifier:
+                supported_os.add("osx")
+            elif "POSIX :: Linux" in classifier:
+                supported_os.add("linux")
+            elif "OS Independent" in classifier:
+                supported_os.update(["win", "osx", "linux"])
+
+    if supported_os:
+        config["supported_platforms"] = sorted(supported_os)
+
+    # Check for platform-specific scripts or URLs
+    urls = project.get("urls", {})
+    if any("win" in url.lower() or "windows" in url.lower() for url in urls.values()):
+        config["has_windows_specific"] = True
+    if any("mac" in url.lower() or "darwin" in url.lower() for url in urls.values()):
+        config["has_macos_specific"] = True
+
+    return config
+
+
+def build_package_section(_toml: dict, _project_root: pathlib.Path) -> dict:
     """Build the package section of the recipe."""
     return {
         "name": "${{ name }}",
@@ -285,7 +533,7 @@ def build_package_section(toml: dict, project_root: pathlib.Path) -> dict:
     }
 
 
-def build_about_section(toml: dict, recipe_dir: pathlib.Path) -> dict:
+def build_about_section(toml: dict, _recipe_dir: pathlib.Path) -> dict:
     """Build the about section of the recipe."""
     project = toml["project"]
     urls = project.get("urls", {}) if isinstance(project.get("urls"), dict) else {}

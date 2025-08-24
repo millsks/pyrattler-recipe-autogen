@@ -220,6 +220,226 @@ def test_build_context_section_missing_version():
         build_context_section(toml_data, pathlib.Path("."))
 
 
+def test_build_context_section_platform_variants():
+    """Test platform/variant detection in context section."""
+    toml_data = {
+        "project": {
+            "name": "test-package",
+            "version": "1.0.0",
+            "requires-python": ">=3.8,<4.0",
+            "classifiers": [
+                "Programming Language :: Python :: 3.8",
+                "Programming Language :: Python :: 3.9",
+                "Programming Language :: Python :: 3.10",
+                "Operating System :: Microsoft :: Windows",
+                "Operating System :: POSIX :: Linux",
+            ],
+            "dependencies": [
+                "numpy>=1.20.0",
+                "pywin32>=200; sys_platform == 'win32'",
+                "some-package>=1.0; platform_machine == 'x86_64'",
+            ],
+        }
+    }
+
+    context = build_context_section(toml_data, pathlib.Path("."))
+
+    # Check basic context
+    assert context["name"] == "test-package"
+    assert context["python_min"] == "3.8"
+    assert context["python_max"] == "4.0"
+
+    # Check platform variants
+    assert "python_variants" in context
+    assert "3.8" in context["python_variants"]
+    assert "3.9" in context["python_variants"]
+    assert "3.10" in context["python_variants"]
+
+    # Check platform dependencies
+    assert "platform_dependencies" in context
+    platform_deps = context["platform_dependencies"]
+    assert "win" in platform_deps
+    assert "pywin32>=200" in platform_deps["win"]
+    assert "arch_64" in platform_deps
+    assert "some-package>=1.0" in platform_deps["arch_64"]
+
+    # Check OS configuration
+    assert "supported_platforms" in context
+    supported = context["supported_platforms"]
+    assert "win" in supported
+    assert "linux" in supported
+
+
+def test_detect_python_variants_from_classifiers():
+    """Test Python version detection from classifiers."""
+    from pyrattler_recipe_autogen.core import _detect_python_variants
+
+    project = {
+        "classifiers": [
+            "Programming Language :: Python :: 3.8",
+            "Programming Language :: Python :: 3.9",
+            "Programming Language :: Python :: 3.10",
+            "Development Status :: 4 - Beta",  # Should be ignored
+        ]
+    }
+
+    variants = _detect_python_variants(project)
+    assert variants == ["3.8", "3.9", "3.10"]
+
+
+def test_detect_python_variants_from_requires():
+    """Test Python version detection from requires-python."""
+    from pyrattler_recipe_autogen.core import _detect_python_variants
+
+    project = {"requires-python": ">=3.8,<3.12"}
+    variants = _detect_python_variants(project)
+    expected = ["3.8", "3.9", "3.10", "3.11"]
+    assert variants == expected
+
+    # Test single constraint
+    project = {"requires-python": ">=3.9"}
+    variants = _detect_python_variants(project)
+    # Should generate reasonable range
+    assert "3.9" in variants
+    assert "3.10" in variants
+
+
+def test_detect_platform_dependencies():
+    """Test platform-specific dependency detection."""
+    from pyrattler_recipe_autogen.core import _detect_platform_dependencies
+
+    project = {
+        "dependencies": [
+            "numpy>=1.20.0",  # No marker
+            "pywin32>=200; sys_platform == 'win32'",
+            "some-linux-lib; sys_platform == 'linux'",
+            "arch-specific; platform_machine == 'x86_64'",
+            "arm-specific; platform_machine == 'aarch64'",
+        ]
+    }
+
+    platform_deps = _detect_platform_dependencies(project)
+
+    assert "win" in platform_deps
+    assert "pywin32>=200" in platform_deps["win"]
+
+    assert "linux" in platform_deps
+    assert "some-linux-lib" in platform_deps["linux"]
+
+    assert "arch_64" in platform_deps
+    assert "arch-specific" in platform_deps["arch_64"]
+
+    assert "arch_arm64" in platform_deps
+    assert "arm-specific" in platform_deps["arch_arm64"]
+
+
+def test_extract_platform_from_marker():
+    """Test platform extraction from environment markers."""
+    from pyrattler_recipe_autogen.core import _extract_platform_from_marker
+
+    test_cases = [
+        ('sys_platform == "win32"', "win"),
+        ('sys_platform == "darwin"', "osx"),
+        ('sys_platform == "linux"', "linux"),
+        ("sys_platform == 'win32'", "win"),  # Single quotes
+        ('python_version >= "3.8"', None),  # Not a platform marker
+    ]
+
+    for marker, expected in test_cases:
+        result = _extract_platform_from_marker(marker)
+        assert result == expected, f"Expected {marker} -> {expected}, got {result}"
+
+
+def test_extract_architecture_from_marker():
+    """Test architecture extraction from environment markers."""
+    from pyrattler_recipe_autogen.core import _extract_architecture_from_marker
+
+    test_cases = [
+        ('platform_machine == "x86_64"', "64"),
+        ('platform_machine == "amd64"', "64"),
+        ('platform_machine == "aarch64"', "arm64"),
+        ('platform_machine == "arm64"', "arm64"),
+        ('platform_machine == "i386"', "32"),
+        ('sys_platform == "win32"', None),  # Not an architecture marker
+    ]
+
+    for marker, expected in test_cases:
+        result = _extract_architecture_from_marker(marker)
+        assert result == expected, f"Expected {marker} -> {expected}, got {result}"
+
+
+def test_detect_architecture_config():
+    """Test architecture configuration detection."""
+    from pyrattler_recipe_autogen.core import _detect_architecture_config
+
+    # Test noarch detection for pure Python
+    toml_data = {
+        "build-system": {"build-backend": "flit_core.buildapi"},
+        "project": {"dependencies": ["requests", "click"]},
+    }
+    config = _detect_architecture_config(toml_data)
+    assert config["noarch"] == "python"
+
+    # Test compiled dependency detection
+    toml_data = {
+        "build-system": {"build-backend": "setuptools.build_meta"},
+        "project": {"dependencies": ["numpy>=1.20.0", "scipy"]},
+    }
+    config = _detect_architecture_config(toml_data)
+    assert "arch_variants" in config
+    assert config["arch_variants"] == ["64", "arm64"]
+
+
+def test_detect_os_config():
+    """Test OS configuration detection."""
+    from pyrattler_recipe_autogen.core import _detect_os_config
+
+    project = {
+        "classifiers": [
+            "Operating System :: Microsoft :: Windows",
+            "Operating System :: POSIX :: Linux",
+            "Operating System :: MacOS",
+        ],
+        "urls": {
+            "Repository": "https://github.com/user/repo",
+            "Windows-Installer": "https://example.com/windows-installer.exe",
+            "Mac-Binary": "https://example.com/macos-binary.dmg",
+        },
+    }
+
+    config = _detect_os_config(project)
+
+    assert "supported_platforms" in config
+    supported = config["supported_platforms"]
+    assert "win" in supported
+    assert "linux" in supported
+    assert "osx" in supported
+
+    assert config["has_windows_specific"] is True
+    assert config["has_macos_specific"] is True
+
+
+def test_parse_dependency_marker():
+    """Test dependency marker parsing."""
+    from pyrattler_recipe_autogen.core import _parse_dependency_marker
+
+    # Test platform marker
+    result = _parse_dependency_marker('pywin32>=200; sys_platform == "win32"')
+    assert result == ("win", "pywin32>=200")
+
+    # Test architecture marker
+    result = _parse_dependency_marker('some-lib; platform_machine == "x86_64"')
+    assert result == ("arch_64", "some-lib")
+
+    # Test unsupported marker
+    result = _parse_dependency_marker('some-lib; python_version >= "3.8"')
+    assert result is None
+
+    # Test no marker
+    result = _parse_dependency_marker("numpy>=1.20.0")
+    assert result is None
+
+
 def test_build_package_section():
     """Test building package section."""
     toml_data = {"project": {"name": "test", "version": "1.0"}}
