@@ -3,9 +3,16 @@
 Automatically generates recipe.yaml files for rattler-build directly from your Python project's pyproject.toml, eliminating the need for manual recipe creation.
 Features intelligent auto-detection, advanced dependency management, and comprehensive integration support.
 
+<!-- Badges -->
+
+[![CI](https://github.com/millsks/pyrattler-recipe-autogen/workflows/CI/badge.svg)](https://github.com/millsks/pyrattler-recipe-autogen/actions/workflows/ci.yml)
 [![Test Coverage](https://img.shields.io/badge/coverage-97%25-brightgreen)](https://github.com/millsks/pyrattler-recipe-autogen)
+[![PyPI version](https://img.shields.io/pypi/v/pyrattler-recipe-autogen?color=blue)](https://pypi.org/project/pyrattler-recipe-autogen/)
 [![Python Version](https://img.shields.io/badge/python-3.9%E2%80%933.13-blue)](https://python.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Pixi Badge](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/prefix-dev/pixi/main/assets/badge/v0.json)](https://pixi.sh)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
+[![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 ## ✨ Features
 
