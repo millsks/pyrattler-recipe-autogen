@@ -22,6 +22,11 @@ on:
         required: false
         type: boolean
         default: false
+      force_recreate:
+        description: "Remove existing tag/release if it exists before creating new one"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   release-and-publish:
@@ -58,10 +63,48 @@ jobs:
       - name: Check if version already exists
         run: |
           if git tag | grep -q "^v${{ inputs.version }}$"; then
-            echo "❌ Version v${{ inputs.version }} already exists"
-            exit 1
+            if [ "${{ inputs.force_recreate }}" = "true" ]; then
+              echo "⚠️  Version v${{ inputs.version }} already exists but force_recreate is enabled"
+              echo "Will remove existing tag and release..."
+            else
+              echo "❌ Version v${{ inputs.version }} already exists"
+              echo "Use 'force_recreate' option to remove and recreate it"
+              exit 1
+            fi
+          else
+            echo "✅ Version is new"
           fi
-          echo "✅ Version is new"
+
+      - name: Remove existing tag and release (if force_recreate enabled)
+        if: inputs.force_recreate == true
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+        run: |
+          VERSION="v${{ inputs.version }}"
+
+          # Check if tag exists
+          if git tag | grep -q "^${VERSION}$"; then
+            echo "🗑️ Removing existing tag: ${VERSION}"
+
+            # Delete remote tag
+            git push origin --delete "${VERSION}" || echo "Remote tag doesn't exist or already deleted"
+
+            # Delete local tag
+            git tag -d "${VERSION}" || echo "Local tag doesn't exist or already deleted"
+
+            echo "✅ Tag ${VERSION} removed"
+          else
+            echo "ℹ️  Tag ${VERSION} doesn't exist, nothing to remove"
+          fi
+
+          # Check if GitHub release exists and delete it
+          if gh release view "${VERSION}" >/dev/null 2>&1; then
+            echo "🗑️ Removing existing GitHub release: ${VERSION}"
+            gh release delete "${VERSION}" --yes
+            echo "✅ Release ${VERSION} removed"
+          else
+            echo "ℹ️  Release ${VERSION} doesn't exist, nothing to remove"
+          fi
 
       - name: Run quality checks
         run: |
@@ -131,3 +174,18 @@ jobs:
           prerelease: ${{ github.event.inputs.prerelease }}
           files: dist/*
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to Test PyPI
+        if: inputs.publish_to_test_pypi == true
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          verbose: true
+          print-hash: true
+
+      - name: Publish to PyPI
+        if: inputs.publish_to_pypi == true
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          verbose: true
+          print-hash: true
