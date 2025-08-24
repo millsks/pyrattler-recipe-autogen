@@ -118,32 +118,13 @@ jobs:
       - name: Build package
         run: pixi run build
 
-      - name: Update CHANGELOG.md
+      - name: Update CHANGELOG.md with git-cliff
         run: |
-          if [ ! -f CHANGELOG.md ]; then
-            echo "# Changelog" > CHANGELOG.md
-            echo "" >> CHANGELOG.md
-          fi
+          # Generate changelog up to the new version with the specific tag
+          # This will replace [unreleased] with the actual version number
+          pixi run git-cliff --tag "v${{ inputs.version }}" --output CHANGELOG.md
 
-          # Create temporary file with new version entry
-          cat << EOF > temp_changelog.md
-          # Changelog
-
-          ## [${{ inputs.version }}] - $(date +%Y-%m-%d)
-
-          ### Added
-          - Release version ${{ inputs.version }}
-
-          EOF
-
-          # Append existing content (skip the first "# Changelog" line if it exists)
-          if grep -q "^# Changelog" CHANGELOG.md; then
-            tail -n +2 CHANGELOG.md >> temp_changelog.md
-          else
-            cat CHANGELOG.md >> temp_changelog.md
-          fi
-
-          mv temp_changelog.md CHANGELOG.md
+          echo "✅ Updated CHANGELOG.md with version v${{ inputs.version }}"
 
       - name: Commit and tag release
         run: |
