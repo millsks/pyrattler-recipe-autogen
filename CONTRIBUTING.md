@@ -349,6 +349,9 @@ Related to #(issue number)
 
 ## 🐛 Reporting Issues
 
+> **🔒 Security Issues**: Do **NOT** report security vulnerabilities as public issues.  
+> Use [GitHub Security Advisories](https://github.com/millsks/pyrattler-recipe-autogen/security/advisories/new) or see our [Security Policy](SECURITY.md) for private reporting instructions.
+
 ### Bug Reports
 
 Use the bug report template:
