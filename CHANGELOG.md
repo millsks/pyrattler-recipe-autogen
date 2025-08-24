@@ -5,28 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-<!--
-This changelog is automatically generated using git-cliff.
-See: https://git-cliff.org/
+## [0.9.2] - 2025-08-24
 
-Available pixi tasks for changelog management:
-- `pixi run changelog`: Generate full changelog
-- `pixi run changelog-unreleased`: Show unreleased changes
-- `pixi run changelog-latest`: Show latest release only
-- `pixi run release-preview`: Preview next release
+### 📚 Documentation
 
-The git-cliff configuration is in pyproject.toml under [tool.git-cliff].
--->
-
-## [unreleased]
-
-### ⭐ Features
-
-- Add PyPI publishing steps to release workflow
-
-### 🐛 Bug Fixes
-
-- Update changelog generation to use specific tag version
+- Regenerate CHANGELOG.md using git-cliff with full project history
 
 ## [0.9.1] - 2025-08-24
 
@@ -62,7 +45,7 @@ The git-cliff configuration is in pyproject.toml under [tool.git-cliff].
 
 ### 🐛 Bug Fixes
 
-- Exclude auto-generated \_version.py from linting and coverage
+- Exclude auto-generated _version.py from linting and coverage
 - Resolve markdown linting issues in documentation
 - Enable automatic dependabot scans
 - Update CI workflow to use standardized type-check task name
@@ -128,7 +111,7 @@ The git-cliff configuration is in pyproject.toml under [tool.git-cliff].
 - Normalize path handling for cross-platform compatibility in tests
 - Enhance dynamic version resolution with setuptools_scm handling and tests
 - Update dynamic version resolution fallback to use placeholder for unknown backends
-- Improve handling of Windows cross-drive paths in \_get_relative_path function
+- Improve handling of Windows cross-drive paths in _get_relative_path function
 - Update version in pixi.lock and refactor setuptools_scm import handling in core.py and tests
 - Update Pixi setup to version 0.9.0 and adjust Pixi version to 0.52.0
 - Configure hatch-vcs to avoid local version identifiers for PyPI uploads
