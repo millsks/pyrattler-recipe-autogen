@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.8] - 2025-08-24
+
+### ⚙️ Miscellaneous Tasks
+
+- Extract release notes from CHANGELOG.md for GitHub releases
+
+### 📚 Documentation
+
+- Add comprehensive badges to README.md
+
 ## [0.9.7] - 2025-08-24
 
 ### ⚙️ Miscellaneous Tasks
@@ -72,7 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Bug Fixes
 
-- Exclude auto-generated _version.py from linting and coverage
+- Exclude auto-generated \_version.py from linting and coverage
 - Resolve markdown linting issues in documentation
 - Enable automatic dependabot scans
 - Update CI workflow to use standardized type-check task name
@@ -138,7 +148,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Normalize path handling for cross-platform compatibility in tests
 - Enhance dynamic version resolution with setuptools_scm handling and tests
 - Update dynamic version resolution fallback to use placeholder for unknown backends
-- Improve handling of Windows cross-drive paths in _get_relative_path function
+- Improve handling of Windows cross-drive paths in \_get_relative_path function
 - Update version in pixi.lock and refactor setuptools_scm import handling in core.py and tests
 - Update Pixi setup to version 0.9.0 and adjust Pixi version to 0.52.0
 - Configure hatch-vcs to avoid local version identifiers for PyPI uploads
