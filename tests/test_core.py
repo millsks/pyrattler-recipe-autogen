@@ -2485,5 +2485,293 @@ build-backend = "hatchling.build"
             assert "test" not in recipe_data  # Should be excluded
 
 
+# Tests for Integration Enhancements (Enhancement 7)
+
+
+def test_integration_config_initialization():
+    """Test IntegrationConfig initialization with default values."""
+    from pyrattler_recipe_autogen.core import IntegrationConfig
+
+    config = IntegrationConfig()
+
+    assert config.pixi_integration is True
+    assert config.ci_cd_detection is True
+    assert config.precommit_integration is True
+    assert config.dev_workflow_optimization is True
+    assert config.suggest_improvements is True
+
+
+def test_integration_config_custom_values():
+    """Test IntegrationConfig with custom values."""
+    from pyrattler_recipe_autogen.core import IntegrationConfig
+
+    config = IntegrationConfig(
+        pixi_integration=False,
+        ci_cd_detection=False,
+        precommit_integration=True,
+        dev_workflow_optimization=True,
+        suggest_improvements=False,
+    )
+
+    assert config.pixi_integration is False
+    assert config.ci_cd_detection is False
+    assert config.precommit_integration is True
+    assert config.dev_workflow_optimization is True
+    assert config.suggest_improvements is False
+
+
+def test_detect_pixi_integration():
+    """Test pixi integration detection."""
+    import tempfile
+
+    from pyrattler_recipe_autogen.core import _detect_pixi_integration
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = pathlib.Path(temp_dir)
+
+        # Test with no pixi files
+        result = _detect_pixi_integration(temp_path)
+        assert result["detected"] is False
+
+        # Test with pixi.lock only
+        (temp_path / "pixi.lock").touch()
+        result = _detect_pixi_integration(temp_path)
+        assert result["detected"] is True
+        assert result["has_pixi_lock"] is True
+        assert result["has_pixi_toml"] is False
+
+        # Test with pixi.toml
+        pixi_toml_content = """
+[project]
+name = "test"
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-64"]
+
+[tasks]
+test = "pytest"
+
+[environments]
+dev = ["test"]
+"""
+        (temp_path / "pixi.toml").write_text(pixi_toml_content)
+        result = _detect_pixi_integration(temp_path)
+        assert result["detected"] is True
+        assert result["has_pixi_toml"] is True
+        assert result["channels"] == ["conda-forge"]
+        assert result["platforms"] == ["linux-64", "osx-64"]
+        assert result["environments"] == ["dev"]
+        assert "test" in result["tasks"]
+
+
+def test_detect_ci_cd_systems():
+    """Test CI/CD system detection."""
+    import tempfile
+
+    from pyrattler_recipe_autogen.core import _detect_ci_cd_systems
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = pathlib.Path(temp_dir)
+
+        # Test with no CI/CD
+        result = _detect_ci_cd_systems(temp_path)
+        assert result == []
+
+        # Test GitHub Actions
+        github_dir = temp_path / ".github" / "workflows"
+        github_dir.mkdir(parents=True)
+        (github_dir / "ci.yml").touch()
+        result = _detect_ci_cd_systems(temp_path)
+        assert "github-actions" in result
+
+        # Test GitLab CI
+        (temp_path / ".gitlab-ci.yml").touch()
+        result = _detect_ci_cd_systems(temp_path)
+        assert "gitlab-ci" in result
+
+        # Test Travis CI
+        (temp_path / ".travis.yml").touch()
+        result = _detect_ci_cd_systems(temp_path)
+        assert "travis-ci" in result
+
+
+def test_detect_precommit_config():
+    """Test pre-commit configuration detection."""
+    import tempfile
+
+    from pyrattler_recipe_autogen.core import _detect_precommit_config
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = pathlib.Path(temp_dir)
+
+        # Test with no pre-commit config
+        result = _detect_precommit_config(temp_path)
+        assert result is None
+
+        # Test with valid pre-commit config
+        precommit_content = """
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.4.0
+  hooks:
+  - id: trailing-whitespace
+"""
+        (temp_path / ".pre-commit-config.yaml").write_text(precommit_content)
+        result = _detect_precommit_config(temp_path)
+        assert result is not None
+        assert "repos" in result
+
+
+def test_detect_dev_tools():
+    """Test development tool detection."""
+    import tempfile
+
+    from pyrattler_recipe_autogen.core import _detect_dev_tools
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = pathlib.Path(temp_dir)
+
+        # Test with pyproject.toml tool configurations
+        toml_data = {
+            "tool": {
+                "pytest": {"testpaths": ["tests"]},
+                "mypy": {"strict": True},
+                "ruff": {"line-length": 88},
+            }
+        }
+
+        result = _detect_dev_tools(temp_path, toml_data)
+        assert "pytest" in result
+        assert "mypy" in result
+        assert "ruff" in result
+
+        # Test with config files
+        (temp_path / "tox.ini").touch()
+        (temp_path / ".coveragerc").touch()
+
+        result = _detect_dev_tools(temp_path, {})
+        assert "tox" in result
+        assert "coverage" in result
+
+
+def test_generate_workflow_suggestions():
+    """Test workflow suggestion generation."""
+    from pyrattler_recipe_autogen.core import (
+        IntegrationInfo,
+        _generate_workflow_suggestions,
+    )
+
+    # Test with minimal setup
+    integration_info = IntegrationInfo()
+    suggestions = _generate_workflow_suggestions(integration_info)
+
+    assert any("pixi" in s for s in suggestions)
+    assert any("CI/CD" in s or "GitHub Actions" in s for s in suggestions)
+    assert any("pre-commit" in s for s in suggestions)
+
+    # Test with some tools detected
+    integration_info.pixi_detected = True
+    integration_info.dev_tools = ["pytest"]
+    suggestions = _generate_workflow_suggestions(integration_info)
+
+    # Should suggest missing essential tools
+    assert any("mypy" in s and "ruff" in s for s in suggestions)
+
+
+def test_generate_integration_recommendations():
+    """Test integration recommendation generation."""
+    from pyrattler_recipe_autogen.core import (
+        IntegrationInfo,
+        _generate_integration_recommendations,
+    )
+
+    # Test with GPU dependencies
+    toml_data = {
+        "project": {"dependencies": ["tensorflow-gpu", "numpy"]},
+        "build-system": {"build-backend": "setuptools.build_meta"},
+    }
+
+    integration_info = IntegrationInfo(pixi_detected=True)
+    recommendations = _generate_integration_recommendations(integration_info, toml_data)
+
+    assert any("conda-forge alternatives" in r for r in recommendations)
+    assert any("hatchling" in r for r in recommendations)
+
+
+def test_detect_integration_enhancements():
+    """Test comprehensive integration detection."""
+    import tempfile
+
+    from pyrattler_recipe_autogen.core import (
+        IntegrationConfig,
+        _detect_integration_enhancements,
+    )
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = pathlib.Path(temp_dir)
+
+        # Create test environment
+        (temp_path / "pixi.toml").write_text("[project]\nname = 'test'")
+        (temp_path / ".pre-commit-config.yaml").write_text("repos: []")
+
+        github_dir = temp_path / ".github" / "workflows"
+        github_dir.mkdir(parents=True)
+        (github_dir / "ci.yml").touch()
+
+        toml_data = {"tool": {"pytest": {}, "mypy": {}}}
+
+        config = IntegrationConfig()
+        result = _detect_integration_enhancements(temp_path, toml_data, config)
+
+        assert result.pixi_detected is True
+        assert result.precommit_detected is True
+        assert "github-actions" in result.ci_cd_systems
+        assert "pytest" in result.dev_tools
+        assert "mypy" in result.dev_tools
+        assert len(result.workflow_suggestions) > 0
+
+
+def test_load_integration_config():
+    """Test loading integration configuration from pyproject.toml."""
+    from pyrattler_recipe_autogen.core import _load_integration_config
+
+    # Test with custom configuration
+    toml_data = {
+        "tool": {
+            "conda": {
+                "recipe": {
+                    "integration": {
+                        "pixi_integration": False,
+                        "ci_cd_detection": True,
+                        "suggest_improvements": False,
+                    }
+                }
+            }
+        }
+    }
+
+    config = _load_integration_config(toml_data)
+
+    assert config.pixi_integration is False
+    assert config.ci_cd_detection is True
+    assert config.suggest_improvements is False
+    assert config.precommit_integration is True  # Default value
+
+
+def test_load_integration_config_defaults():
+    """Test loading integration configuration with defaults."""
+    from pyrattler_recipe_autogen.core import _load_integration_config
+
+    # Test with no configuration
+    toml_data = {}
+
+    config = _load_integration_config(toml_data)
+
+    assert config.pixi_integration is True
+    assert config.ci_cd_detection is True
+    assert config.precommit_integration is True
+    assert config.dev_workflow_optimization is True
+    assert config.suggest_improvements is True
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

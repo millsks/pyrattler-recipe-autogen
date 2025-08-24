@@ -1,27 +1,10 @@
-"""
-from __future__ import annotations
+"""Core business logic for generating Rattler-Build recipe.yaml from pyproject.toml.
 
-import logging
-import os
-import shutil
-import subprocess
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, Union
-
-import tomli
-
-logger = logging.getLogger(__name__)
-
-# ----
-# Core business logic for generating Rattler-Build recipe.yaml from pyproject.toml
-#
-# • Pulls canonical project data from `[project]`
-# • Handles dynamic version resolution from build backends
-# • If `[tool.pixi]` exists, uses Pixi tables for requirement mapping
-# • Reads extra/override keys from `[tool.conda.recipe.*]`
-# ----
-
-# Optional setuptools_scm import handled within function
+• Pulls canonical project data from `[project]`
+• Handles dynamic version resolution from build backends
+• If `[tool.pixi]` exists, uses Pixi tables for requirement mapping
+• Reads extra/override keys from `[tool.conda.recipe.*]`
+• Generates structured recipe sections with intelligent auto-detection
 """
 
 from __future__ import annotations
@@ -32,6 +15,7 @@ import re
 import subprocess
 import sys
 import typing as _t
+from dataclasses import dataclass, field
 from typing import Union
 
 try:
@@ -2035,4 +2019,274 @@ def _load_output_config(toml_data: dict) -> OutputConfig:
         exclude_sections=output_settings.get("exclude_sections"),
         custom_templates=output_settings.get("custom_templates"),
         json_indent=output_settings.get("json_indent", 2),
+    )
+
+
+# Enhancement 7: Integration Enhancements
+
+
+@dataclass
+class IntegrationConfig:
+    """Configuration for integration enhancements."""
+
+    pixi_integration: bool = True
+    ci_cd_detection: bool = True
+    precommit_integration: bool = True
+    dev_workflow_optimization: bool = True
+    suggest_improvements: bool = True
+
+
+@dataclass
+class IntegrationInfo:
+    """Information about detected integrations."""
+
+    pixi_detected: bool = False
+    pixi_config: dict[str, _t.Any] | None = None
+    ci_cd_systems: list[str] = field(default_factory=list)
+    precommit_detected: bool = False
+    precommit_config: dict[str, _t.Any] | None = None
+    dev_tools: list[str] = field(default_factory=list)
+    workflow_suggestions: list[str] = field(default_factory=list)
+    integration_recommendations: list[str] = field(default_factory=list)
+
+
+def _detect_pixi_integration(project_path: pathlib.Path) -> dict[str, _t.Any]:
+    """Detect pixi configuration and environment setup."""
+    pixi_info = {
+        "detected": False,
+        "has_pixi_toml": False,
+        "has_pixi_lock": False,
+        "channels": [],
+        "platforms": [],
+        "environments": [],
+        "tasks": {},
+    }
+
+    # Check for pixi.toml
+    pixi_toml_path = project_path / "pixi.toml"
+    if pixi_toml_path.exists():
+        pixi_info["detected"] = True
+        pixi_info["has_pixi_toml"] = True
+
+        try:
+            with pixi_toml_path.open("rb") as f:
+                pixi_data = tomllib.load(f)
+
+            # Extract basic information
+            project_section = pixi_data.get("project", {})
+            pixi_info["channels"] = project_section.get("channels", [])
+            pixi_info["platforms"] = project_section.get("platforms", [])
+            pixi_info["tasks"] = pixi_data.get("tasks", {})
+
+            # Extract environments
+            env_section = pixi_data.get("environments", {})
+            pixi_info["environments"] = list(env_section.keys())
+
+        except Exception:
+            # If we can't parse, just mark as detected
+            pass
+
+    # Check for pixi.lock
+    pixi_lock_path = project_path / "pixi.lock"
+    if pixi_lock_path.exists():
+        pixi_info["has_pixi_lock"] = True
+        if not pixi_info["detected"]:
+            pixi_info["detected"] = True
+
+    return pixi_info
+
+
+def _detect_ci_cd_systems(project_path: pathlib.Path) -> list[str]:
+    """Detect CI/CD systems in use."""
+    ci_cd_systems = []
+
+    # Check for common CI/CD configurations
+    ci_indicators = [
+        (".github/workflows", "github-actions"),
+        (".gitlab-ci.yml", "gitlab-ci"),
+        (".travis.yml", "travis-ci"),
+        (".circleci/config.yml", "circleci"),
+        ("azure-pipelines.yml", "azure-pipelines"),
+        ("Jenkinsfile", "jenkins"),
+    ]
+
+    for indicator, system in ci_indicators:
+        if "/" in indicator:
+            # Directory check
+            check_path = project_path / indicator
+            if check_path.exists() and any(check_path.glob("*.yml")):
+                ci_cd_systems.append(system)
+        else:
+            # File check
+            check_path = project_path / indicator
+            if check_path.exists():
+                ci_cd_systems.append(system)
+
+    return ci_cd_systems
+
+
+def _detect_precommit_config(project_path: pathlib.Path) -> dict[str, _t.Any] | None:
+    """Detect pre-commit configuration."""
+    precommit_config_path = project_path / ".pre-commit-config.yaml"
+    if not precommit_config_path.exists():
+        return None
+
+    try:
+        with precommit_config_path.open("r") as f:
+            config_data: dict[str, _t.Any] = yaml.safe_load(f)
+            return config_data
+    except Exception:
+        return {"detected": True, "parse_error": True}
+
+
+def _detect_dev_tools(project_path: pathlib.Path, toml_data: dict) -> list[str]:
+    """Detect development tools in use."""
+    dev_tools = []
+
+    # Check pyproject.toml tool configurations
+    tools_section = toml_data.get("tool", {})
+    tool_names = [
+        "pytest",
+        "mypy",
+        "ruff",
+        "black",
+        "isort",
+        "flake8",
+        "pylint",
+        "bandit",
+        "coverage",
+        "tox",
+        "hatch",
+    ]
+
+    for tool in tool_names:
+        if tool in tools_section:
+            dev_tools.append(tool)
+
+    # Check for additional config files
+    config_files = {
+        "pytest.ini": "pytest",
+        "mypy.ini": "mypy",
+        ".mypy.ini": "mypy",
+        "tox.ini": "tox",
+        ".coveragerc": "coverage",
+        ".flake8": "flake8",
+        ".pylintrc": "pylint",
+    }
+
+    for config_file, tool in config_files.items():
+        if tool not in dev_tools and (project_path / config_file).exists():
+            dev_tools.append(tool)
+
+    return dev_tools
+
+
+def _generate_workflow_suggestions(integration_info: IntegrationInfo) -> list[str]:
+    """Generate workflow improvement suggestions."""
+    suggestions = []
+
+    # Pixi suggestions
+    if not integration_info.pixi_detected:
+        suggestions.append("Consider using pixi for environment management")
+
+    # CI/CD suggestions
+    if not integration_info.ci_cd_systems:
+        suggestions.append("Consider setting up CI/CD with GitHub Actions")
+
+    # Pre-commit suggestions
+    if not integration_info.precommit_detected:
+        suggestions.append("Consider setting up pre-commit hooks")
+
+    # Development tool suggestions
+    essential_tools = {"pytest", "mypy", "ruff"}
+    missing_tools = essential_tools - set(integration_info.dev_tools)
+    if missing_tools:
+        tools_str = ", ".join(sorted(missing_tools))
+        suggestions.append(f"Consider adding development tools: {tools_str}")
+
+    return suggestions
+
+
+def _generate_integration_recommendations(
+    integration_info: IntegrationInfo, toml_data: dict
+) -> list[str]:
+    """Generate specific integration recommendations."""
+    recommendations = []
+
+    # Check for conda-specific recommendations
+    project_section = toml_data.get("project", {})
+    dependencies = project_section.get("dependencies", [])
+
+    # Check for problematic GPU packages
+    gpu_packages = [
+        dep
+        for dep in dependencies
+        if any(
+            gpu in str(dep).lower()
+            for gpu in ["tensorflow-gpu", "pytorch-cuda", "cupy"]
+        )
+    ]
+
+    if gpu_packages:
+        recommendations.append("Consider conda-forge alternatives for GPU packages")
+
+    # Build system recommendations
+    build_system = toml_data.get("build-system", {})
+    backend = build_system.get("build-backend", "")
+
+    if "setuptools" in backend and integration_info.pixi_detected:
+        recommendations.append(
+            "Consider migrating to hatchling for better pixi integration"
+        )
+
+    return recommendations
+
+
+def _detect_integration_enhancements(
+    project_path: pathlib.Path, toml_data: dict, config: IntegrationConfig
+) -> IntegrationInfo:
+    """Detect and analyze integration opportunities."""
+    integration_info = IntegrationInfo()
+
+    if config.pixi_integration:
+        pixi_info = _detect_pixi_integration(project_path)
+        integration_info.pixi_detected = pixi_info["detected"]
+        integration_info.pixi_config = pixi_info
+
+    if config.ci_cd_detection:
+        integration_info.ci_cd_systems = _detect_ci_cd_systems(project_path)
+
+    if config.precommit_integration:
+        precommit_config = _detect_precommit_config(project_path)
+        integration_info.precommit_detected = precommit_config is not None
+        integration_info.precommit_config = precommit_config
+
+    if config.dev_workflow_optimization:
+        integration_info.dev_tools = _detect_dev_tools(project_path, toml_data)
+
+    if config.suggest_improvements:
+        integration_info.workflow_suggestions = _generate_workflow_suggestions(
+            integration_info
+        )
+        integration_info.integration_recommendations = (
+            _generate_integration_recommendations(integration_info, toml_data)
+        )
+
+    return integration_info
+
+
+def _load_integration_config(toml_data: dict) -> IntegrationConfig:
+    """Load integration configuration from pyproject.toml."""
+    integration_settings = _toml_get(
+        toml_data, "tool.conda.recipe.integration", default={}
+    )
+
+    return IntegrationConfig(
+        pixi_integration=integration_settings.get("pixi_integration", True),
+        ci_cd_detection=integration_settings.get("ci_cd_detection", True),
+        precommit_integration=integration_settings.get("precommit_integration", True),
+        dev_workflow_optimization=integration_settings.get(
+            "dev_workflow_optimization", True
+        ),
+        suggest_improvements=integration_settings.get("suggest_improvements", True),
     )
