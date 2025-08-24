@@ -302,6 +302,12 @@ git commit -m "test: add integration tests for CI/CD detection"
 
 ## 📝 Pull Request Guidelines
 
+### Creating a Pull Request
+
+When you create a pull request, GitHub will automatically load our pull request template with comprehensive checklists and sections to fill out.
+
+**[🚀 Create Pull Request](https://github.com/millsks/pyrattler-recipe-autogen/compare)**
+
 ### PR Title
 
 Use conventional commit format:
@@ -312,91 +318,91 @@ fix: resolve issue with dynamic version detection
 docs: improve README examples and configuration
 ```
 
-### PR Description Template
+### PR Template Structure
 
-```markdown
-## Description
+Our pull request template includes the following sections:
 
-Brief description of the changes made.
+- **Description**: Brief overview of your changes
+- **Type of Change**: Bug fix, new feature, breaking change, or documentation
+- **Testing**: Confirmation that tests have been added/updated and pass
+- **Quality Checks**: Comprehensive checklist including:
+  - Code formatting (`pixi run format`)
+  - Linting (`pixi run lint`)
+  - Type checking (`pixi run type-check`)
+  - Security checks (`pixi run security-check`)
+  - Test coverage (`pixi run test-cov`) - must maintain >95%
+  - All checks (`pixi run check-all`)
+- **Code Review Checklist**: Self-review items
+- **Related Issues**: Link to relevant GitHub issues
+- **Additional Context**: Extra information, screenshots, etc.
 
-## Type of Change
+### Quality Requirements
 
-- [ ] Bug fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] Documentation update
+Before submitting a PR, ensure:
 
-## Testing
-
-- [ ] I have added tests that prove my fix is effective or that my feature works
-- [ ] New and existing unit tests pass locally with my changes
-- [ ] I have tested the changes manually
-
-## Checklist
-
-- [ ] My code follows the style guidelines of this project
-- [ ] I have performed a self-review of my own code
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] I have made corresponding changes to the documentation
-- [ ] My changes generate no new warnings
-- [ ] Any dependent changes have been merged and published
-
-## Related Issues
-
-Fixes #(issue number)
-Related to #(issue number)
-```
+1. **All tests pass**: `pixi run test`
+2. **Code coverage maintained**: Must stay above 95%
+3. **All quality checks pass**: `pixi run check-all`
+4. **Pre-commit hooks pass**: Automatic on commit
+5. **Self-review completed**: Review your own changes first
 
 ## 🐛 Reporting Issues
 
 > **🔒 Security Issues**: Do **NOT** report security vulnerabilities as public issues.  
 > Use [GitHub Security Advisories](https://github.com/millsks/pyrattler-recipe-autogen/security/advisories/new) or see our [Security Policy](SECURITY.md) for private reporting instructions.
 
-### Bug Reports
+### 🐛 Bug Reports
 
-Use the bug report template:
+When you encounter a bug, please use our bug report template to provide detailed information:
 
-```markdown
-**Describe the bug**
-A clear and concise description of what the bug is.
+**[📝 Create Bug Report](https://github.com/millsks/pyrattler-recipe-autogen/issues/new?assignees=&labels=bug%2Ctriage&projects=&template=bug_report.yml&title=%5BBug%5D%3A+)**
 
-**To Reproduce**
-Steps to reproduce the behavior:
+The bug report template will ask for:
 
-1. Run command '...'
-2. With input file '...'
-3. See error
+- **Bug Description**: Clear description of what went wrong
+- **Steps to Reproduce**: Exact steps to trigger the bug
+- **Expected vs Actual Behavior**: What should have happened vs what actually happened
+- **Environment Details**: OS, Python version, pyrattler-recipe-autogen version
+- **Additional Context**: Logs, screenshots, or other helpful information
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+### ✨ Feature Requests
 
-**Environment:**
+Have an idea for a new feature or enhancement? Use our feature request template:
 
-- OS: [e.g. macOS, Linux, Windows]
-- Python version: [e.g. 3.9]
-- pyrattler-recipe-autogen version: [e.g. 0.1.0]
+**[💡 Create Feature Request](https://github.com/millsks/pyrattler-recipe-autogen/issues/new?assignees=&labels=enhancement%2Ctriage&projects=&template=feature_request.yml&title=%5BFeature%5D%3A+)**
 
-**Additional context**
-Add any other context about the problem here.
-```
+The feature request template will guide you through:
 
-### Feature Requests
+- **Problem Statement**: What problem does this solve?
+- **Proposed Solution**: Detailed description of your idea
+- **Alternative Solutions**: Other approaches you've considered
+- **Use Cases**: How would this feature be used?
+- **Implementation Ideas**: Technical suggestions (if any)
 
-Use the feature request template:
+### 💬 Questions and Discussions
 
-```markdown
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is.
+For general questions, usage help, or community discussions:
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+- **[GitHub Discussions](https://github.com/millsks/pyrattler-recipe-autogen/discussions)**: Best for open-ended questions and community interaction
+- **[Documentation](README.md)**: Check existing documentation first
+- **[Examples](README.md#examples)**: Review usage examples
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
+### 📋 Issue Guidelines
 
-**Additional context**
-Add any other context or screenshots about the feature request here.
-```
+**Before Creating an Issue:**
+
+1. **Search existing issues** to avoid duplicates
+2. **Check the documentation** for existing solutions
+3. **Use the appropriate template** (bug report vs feature request)
+4. **Be specific and detailed** in your descriptions
+
+**Writing Good Issues:**
+
+- Use clear, descriptive titles
+- Include all requested information from the template
+- Add relevant labels if you have permission
+- Reference related issues when applicable
+- Update the issue if you find additional information
 
 ## 🔍 Code Review Process
 
