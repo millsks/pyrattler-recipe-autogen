@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 📚 Documentation
 
 - Remove public security vulnerability template
+- Improve issue and PR guidance in CONTRIBUTING.md
 
 ## [0.9.5] - 2025-08-24
 
