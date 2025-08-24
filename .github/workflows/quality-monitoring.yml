@@ -1,0 +1,118 @@
+name: Code Quality Monitoring
+
+on:
+  schedule:
+    # Run weekly on Mondays at 3 AM UTC
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+jobs:
+  quality-metrics:
+    name: Code Quality Metrics
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Needed for git history analysis
+
+      - name: Set up Pixi
+        uses: prefix-dev/setup-pixi@v0.9.0
+        with:
+          pixi-version: v0.52.0
+          cache: true
+
+      - name: Install dependencies
+        run: pixi install
+
+      - name: Generate coverage report
+        run: |
+          pixi run test-cov
+          pixi run -e default -- coverage json --pretty-print
+
+      - name: Generate complexity report
+        run: |
+          # Generate complexity metrics using radon
+          pip install radon
+          radon cc src/ --json > complexity-report.json || true
+          radon mi src/ --json > maintainability-report.json || true
+
+      - name: Generate security report
+        run: |
+          pixi run -e default -- bandit -r src/ -f json -o security-report.json || true
+
+      - name: Check code quality thresholds
+        run: |
+          python << 'EOF'
+          import json
+          import sys
+
+          # Check coverage threshold
+          with open('coverage.json') as f:
+              coverage_data = json.load(f)
+              total_coverage = coverage_data['totals']['percent_covered']
+              print(f"Current coverage: {total_coverage:.1f}%")
+
+              if total_coverage < 90:
+                  print("⚠️ Coverage below 90% threshold")
+                  with open('quality-issues.txt', 'a') as issues:
+                      issues.write(f"- Coverage is {total_coverage:.1f}% (below 90% threshold)\n")
+
+          # Check for high complexity
+          try:
+              with open('complexity-report.json') as f:
+                  complexity_data = json.load(f)
+                  high_complexity = []
+                  for file_data in complexity_data.values():
+                      if isinstance(file_data, list):
+                          for item in file_data:
+                              if item.get('complexity', 0) > 10:
+                                  high_complexity.append(f"{item['name']} (complexity: {item['complexity']})")
+
+                  if high_complexity:
+                      print("⚠️ High complexity functions found:")
+                      with open('quality-issues.txt', 'a') as issues:
+                          issues.write("- High complexity functions:\n")
+                          for func in high_complexity:
+                              print(f"  - {func}")
+                              issues.write(f"  - {func}\n")
+          except (FileNotFoundError, json.JSONDecodeError):
+              print("Could not analyze complexity data")
+
+          # Check for security issues
+          try:
+              with open('security-report.json') as f:
+                  security_data = json.load(f)
+                  if security_data.get('results'):
+                      print("⚠️ Security issues found")
+                      with open('quality-issues.txt', 'a') as issues:
+                          issues.write(f"- {len(security_data['results'])} security issues detected\n")
+          except (FileNotFoundError, json.JSONDecodeError):
+              print("Could not analyze security data")
+          EOF
+
+      - name: Create issue for quality concerns
+        if: hashFiles('quality-issues.txt') != ''
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Code Quality Report - Issues Detected"
+          content-filepath: quality-issues.txt
+          labels: |
+            code-quality
+            automated
+            technical-debt
+
+      - name: Upload quality reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-reports
+          path: |
+            coverage.json
+            complexity-report.json
+            maintainability-report.json
+            security-report.json
+          retention-days: 30
