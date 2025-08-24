@@ -1803,5 +1803,359 @@ def test_get_relative_path_windows_cross_drive():
         assert "C:" in result or result == "C:/project/file.txt"
 
 
+# Tests for Enhanced Context Variables (Enhancement 5)
+
+
+def test_detect_enhanced_context_variables():
+    """Test enhanced context variable detection."""
+    import tempfile
+
+    from pyrattler_recipe_autogen.core import _detect_enhanced_context_variables
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        project_root = pathlib.Path(temp_dir)
+
+        # Create test project structure
+        (project_root / "src").mkdir()
+        (project_root / "tests").mkdir()
+        (project_root / "README.md").touch()
+        (project_root / "LICENSE").touch()
+
+        toml_data = {
+            "project": {
+                "name": "test-package",
+                "dependencies": ["numpy>=1.20", "requests>=2.25"],
+                "optional-dependencies": {
+                    "dev": ["pytest", "mypy"],
+                    "docs": ["sphinx"],
+                },
+                "scripts": {"test-cli": "test_package.cli:main"},
+            },
+            "build-system": {
+                "requires": ["hatchling", "numpy"],
+                "build-backend": "hatchling.build",
+            },
+            "tool": {"pytest": {"testpaths": ["tests"]}, "mypy": {"strict": True}},
+        }
+
+        result = _detect_enhanced_context_variables(toml_data, project_root)
+
+        # Check package info
+        assert result["package_name"] == "test-package"
+        assert result["normalized_name"] == "test_package"
+        assert result["conda_name"] == "test-package"
+        assert result["src_dir"] == "src"
+        assert result["has_scripts"] is True
+        assert result["script_count"] == 1
+
+        # Check build system info
+        assert result["build_backend"] == "hatchling.build"
+        assert result["uses_hatchling"] is True
+        assert result["build_requires_count"] == 2
+        assert result["has_compiled_extensions"] is True  # Due to numpy
+
+        # Check dependency patterns
+        assert result["dependency_count"] == 2
+        assert "data_science" in result["dependency_categories"]
+        assert result["optional_dep_groups"] == ["dev", "docs"]
+        assert result["has_dev_dependencies"] is True
+        assert result["has_doc_dependencies"] is True
+
+        # Check development info
+        assert result["test_dir"] == "tests"
+
+        # Check tool configuration
+        assert "pytest" in result["configured_tools"]
+        assert "mypy" in result["configured_tools"]
+        assert result["tool_count"] == 2
+
+
+def test_detect_package_info():
+    """Test package information detection."""
+    import tempfile
+
+    from pyrattler_recipe_autogen.core import _detect_package_info
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        project_root = pathlib.Path(temp_dir)
+        (project_root / "src").mkdir()
+
+        project = {
+            "name": "my-awesome-package",
+            "scripts": {"my-cli": "my_package.cli:main"},
+            "gui-scripts": {"my-gui": "my_package.gui:main"},
+        }
+
+        result = _detect_package_info(project, project_root)
+
+        assert result["package_name"] == "my-awesome-package"
+        assert result["normalized_name"] == "my_awesome_package"
+        assert result["conda_name"] == "my-awesome-package"
+        assert result["src_dir"] == "src"
+        assert result["has_scripts"] is True
+        assert result["has_gui_scripts"] is True
+        assert result["script_count"] == 1
+
+
+def test_detect_package_info_namespace():
+    """Test namespace package detection."""
+    from pyrattler_recipe_autogen.core import _detect_package_info
+
+    project = {"name": "namespace.subpackage"}
+    result = _detect_package_info(project, pathlib.Path("."))
+
+    assert result["namespace_package"] is True
+    assert result["namespace"] == "namespace"
+
+
+def test_analyze_build_backend():
+    """Test build backend analysis."""
+    from pyrattler_recipe_autogen.core import _analyze_build_backend
+
+    # Test setuptools
+    build_system = {"build-backend": "setuptools.build_meta"}
+    result = _analyze_build_backend(build_system)
+    assert result["uses_setuptools"] is True
+
+    # Test hatchling
+    build_system = {"build-backend": "hatchling.build"}
+    result = _analyze_build_backend(build_system)
+    assert result["uses_hatchling"] is True
+
+    # Test flit
+    build_system = {"build-backend": "flit_core.buildapi"}
+    result = _analyze_build_backend(build_system)
+    assert result["uses_flit"] is True
+
+
+def test_analyze_build_requirements():
+    """Test build requirements analysis."""
+    from pyrattler_recipe_autogen.core import _analyze_build_requirements
+
+    build_system = {"requires": ["hatchling", "cython>=0.29", "numpy>=1.20"]}
+
+    result = _analyze_build_requirements(build_system)
+    assert result["build_requires_count"] == 3
+    assert result["has_compiled_extensions"] is True
+
+
+def test_categorize_dependencies():
+    """Test dependency categorization."""
+    from pyrattler_recipe_autogen.core import _categorize_dependencies
+
+    dependencies = [
+        "numpy>=1.20",
+        "requests>=2.25",
+        "scipy>=1.7",  # Pure data science, not UI
+        "matplotlib>=3.0",
+    ]
+
+    result = _categorize_dependencies(dependencies)
+    expected_categories = {"data_science", "web"}
+    assert set(result["dependency_categories"]) == expected_categories
+
+
+def test_extract_dependency_name():
+    """Test dependency name extraction."""
+    from pyrattler_recipe_autogen.core import _extract_dependency_name
+
+    test_cases = [
+        ("numpy>=1.20.0", "numpy"),
+        ("requests==2.25.1", "requests"),
+        ("scipy~=1.7.0", "scipy"),
+        ("matplotlib<4.0", "matplotlib"),
+        ("pandas>1.0 ; python_version >= '3.8'", "pandas"),
+    ]
+
+    for dep_string, expected in test_cases:
+        result = _extract_dependency_name(dep_string)
+        assert result == expected
+
+
+def test_analyze_optional_dependencies():
+    """Test optional dependencies analysis."""
+    from pyrattler_recipe_autogen.core import _analyze_optional_dependencies
+
+    optional_deps = {
+        "dev": ["pytest", "mypy", "ruff"],
+        "test": ["pytest-cov", "pytest-xdist"],
+        "docs": ["sphinx", "sphinx-rtd-theme"],
+        "extra": ["optional-feature"],
+    }
+
+    result = _analyze_optional_dependencies(optional_deps)
+
+    assert set(result["optional_dep_groups"]) == {"dev", "test", "docs", "extra"}
+    assert result["optional_dep_count"] == 8
+    assert result["has_dev_dependencies"] is True
+    assert result["has_test_dependencies"] is True
+    assert result["has_doc_dependencies"] is True
+
+
+def test_detect_development_info():
+    """Test development information detection."""
+    import tempfile
+
+    from pyrattler_recipe_autogen.core import _detect_development_info
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        project_root = pathlib.Path(temp_dir)
+
+        # Create test structure
+        tests_dir = project_root / "tests"
+        tests_dir.mkdir()
+        (tests_dir / "test_main.py").touch()
+        (tests_dir / "test_utils.py").touch()
+        (project_root / "pytest.ini").touch()
+        (project_root / ".pre-commit-config.yaml").touch()
+
+        github_dir = project_root / ".github" / "workflows"
+        github_dir.mkdir(parents=True)
+        (github_dir / "ci.yml").touch()
+
+        result = _detect_development_info({}, project_root)
+
+        assert result["test_dir"] == "tests"
+        assert result["test_file_count"] == 2
+        assert "pytest" in result["config_files"]
+        assert "pre_commit" in result["config_files"]
+        assert result["has_ci_cd"] is True
+
+
+def test_detect_license_info():
+    """Test license information detection."""
+    import tempfile
+
+    from pyrattler_recipe_autogen.core import _detect_license_info
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        project_root = pathlib.Path(temp_dir)
+
+        # Test license text
+        project = {"license": {"text": "MIT License"}}
+        result = _detect_license_info(project, project_root)
+        assert result["license_type"] == "MIT"
+
+        # Test license file
+        license_file = project_root / "LICENSE"
+        license_file.touch()
+        project = {"license": {"file": "LICENSE"}}
+        result = _detect_license_info(project, project_root)
+        assert result["license_file"] == "LICENSE"
+
+        # Test license string
+        project = {"license": "Apache-2.0"}
+        result = _detect_license_info(project, project_root)
+        assert result["license_type"] == "Apache"
+
+
+def test_classify_license():
+    """Test license classification."""
+    from pyrattler_recipe_autogen.core import _classify_license
+
+    test_cases = [
+        ("MIT License", "MIT"),
+        ("Apache License 2.0", "Apache"),
+        ("BSD 3-Clause License", "BSD"),
+        ("GNU General Public License v3.0", "GPL"),
+        ("GNU Lesser General Public License v2.1", "LGPL"),
+        ("Mozilla Public License 2.0", "MPL"),
+        ("Custom License", "Other"),
+    ]
+
+    for license_text, expected in test_cases:
+        result = _classify_license(license_text)
+        assert result == expected
+
+
+def test_detect_documentation_info():
+    """Test documentation detection."""
+    import tempfile
+
+    from pyrattler_recipe_autogen.core import _detect_documentation_info
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        project_root = pathlib.Path(temp_dir)
+
+        # Test README detection only
+        (project_root / "README.md").touch()
+        result = _detect_documentation_info({}, project_root)
+        assert result["readme_file"] == "README.md"
+
+        # Test docs directory detection (create separate test without README)
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        project_root = pathlib.Path(temp_dir)
+
+        # Test docs directory without README
+        docs_dir = project_root / "docs"
+        docs_dir.mkdir()
+        (docs_dir / "conf.py").touch()  # Sphinx config
+
+        result = _detect_documentation_info({}, project_root)
+        assert result["has_docs_dir"] is True
+        assert result["docs_generator"] == "sphinx"
+
+
+def test_detect_repository_info():
+    """Test repository information detection."""
+    from pyrattler_recipe_autogen.core import _detect_repository_info
+
+    # Test GitHub
+    project = {"urls": {"repository": "https://github.com/user/repo"}}
+    result = _detect_repository_info(project)
+    assert result["hosted_on"] == "github"
+
+    # Test GitLab
+    project = {"urls": {"Repository": "https://gitlab.com/user/repo"}}
+    result = _detect_repository_info(project)
+    assert result["hosted_on"] == "gitlab"
+
+    # Test Bitbucket
+    project = {"urls": {"repository": "https://bitbucket.org/user/repo"}}
+    result = _detect_repository_info(project)
+    assert result["hosted_on"] == "bitbucket"
+
+
+def test_build_context_section_enhanced():
+    """Test context section with enhanced variables."""
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        project_root = pathlib.Path(temp_dir)
+        (project_root / "src").mkdir()
+        (project_root / "tests").mkdir()
+
+        toml_data = {
+            "project": {
+                "name": "enhanced-test",
+                "version": "1.0.0",
+                "dependencies": ["numpy>=1.20"],
+                "optional-dependencies": {"dev": ["pytest"]},
+                "requires-python": ">=3.8,<3.12",
+            },
+            "build-system": {
+                "requires": ["hatchling"],
+                "build-backend": "hatchling.build",
+            },
+            "tool": {"pytest": {}},
+        }
+
+        result = build_context_section(toml_data, project_root)
+
+        # Standard context variables
+        assert result["name"] == "enhanced-test"
+        assert result["version"] == "1.0.0"
+        assert result["python_min"] == "3.8"
+        assert result["python_max"] == "3.12"
+
+        # Enhanced context variables
+        assert result["package_name"] == "enhanced-test"
+        assert result["build_backend"] == "hatchling.build"
+        assert result["dependency_count"] == 1
+        assert result["has_dev_dependencies"] is True
+        assert "pytest" in result["configured_tools"]
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

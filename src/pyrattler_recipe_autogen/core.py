@@ -225,7 +225,7 @@ def resolve_dynamic_version(project_root: pathlib.Path, toml: dict) -> str:
 
 
 def build_context_section(toml: dict, project_root: pathlib.Path) -> dict:
-    """Build the context section of the recipe with platform/variant support."""
+    """Build the context section of the recipe with enhanced auto-detection."""
     project = toml["project"]
 
     # Handle dynamic version
@@ -269,6 +269,10 @@ def build_context_section(toml: dict, project_root: pathlib.Path) -> dict:
     if python_max:
         context["python_max"] = python_max
 
+    # Add enhanced context variables
+    enhanced_context = _detect_enhanced_context_variables(toml, project_root)
+    context.update(enhanced_context)
+
     # Add platform/variant context variables
     platform_context = _detect_platform_variants(toml)
     context.update(platform_context)
@@ -284,6 +288,417 @@ def build_context_section(toml: dict, project_root: pathlib.Path) -> dict:
     context.update(extra_context)
 
     return context
+
+
+def _detect_enhanced_context_variables(
+    toml: dict, project_root: pathlib.Path
+) -> dict[str, _t.Any]:
+    """Detect enhanced context variables for advanced recipe generation."""
+    project = toml.get("project", {})
+    context = {}
+
+    # Detect common naming conventions and patterns
+    package_info = _detect_package_info(project, project_root)
+    context.update(package_info)
+
+    # Detect build system and tool configurations
+    build_info = _detect_build_system_info(toml)
+    context.update(build_info)
+
+    # Detect dependency patterns and constraints
+    dep_info = _detect_dependency_patterns(project)
+    context.update(dep_info)
+
+    # Detect development and testing configurations
+    dev_info = _detect_development_info(toml, project_root)
+    context.update(dev_info)
+
+    # Detect license and documentation patterns
+    meta_info = _detect_metadata_patterns(project, project_root)
+    context.update(meta_info)
+
+    return context
+
+
+def _detect_package_info(
+    project: dict[str, _t.Any], project_root: pathlib.Path
+) -> dict[str, _t.Any]:
+    """Detect package naming and structure information."""
+    info: dict[str, _t.Any] = {}
+
+    # Package naming variations
+    name = project.get("name", "")
+    if name:
+        info["package_name"] = name
+        info["normalized_name"] = name.lower().replace("-", "_").replace(" ", "_")
+        info["conda_name"] = name.lower().replace("_", "-").replace(" ", "-")
+
+        # Detect if it's a namespace package
+        if "." in name:
+            info["namespace_package"] = True
+            info["namespace"] = name.split(".")[0]
+
+    # Source directory detection
+    src_patterns = ["src", "lib", project.get("name", "").replace("-", "_")]
+    for pattern in src_patterns:
+        src_path = project_root / pattern
+        if src_path.exists() and src_path.is_dir():
+            info["src_dir"] = pattern
+            break
+
+    # Entry points detection
+    entry_points = project.get("scripts", {})
+    if entry_points:
+        info["has_scripts"] = True
+        info["script_count"] = len(entry_points)
+
+    gui_scripts = project.get("gui-scripts", {})
+    if gui_scripts:
+        info["has_gui_scripts"] = True
+
+    return info
+
+
+def _detect_build_system_info(toml: dict[str, _t.Any]) -> dict[str, _t.Any]:
+    """Detect build system and tool configuration information."""
+    info: dict[str, _t.Any] = {}
+
+    # Build system detection
+    build_system = toml.get("build-system", {})
+    if build_system:
+        info.update(_analyze_build_backend(build_system))
+        info.update(_analyze_build_requirements(build_system))
+
+    # Tool configurations
+    tool_config = toml.get("tool", {})
+    if tool_config:
+        info.update(_analyze_tool_config(tool_config))
+
+    return info
+
+
+def _analyze_build_backend(build_system: dict[str, _t.Any]) -> dict[str, _t.Any]:
+    """Analyze build backend information."""
+    info: dict[str, _t.Any] = {}
+    build_backend = build_system.get("build-backend", "")
+    info["build_backend"] = build_backend
+
+    # Common build backend patterns
+    backend_map = {
+        "setuptools": "uses_setuptools",
+        "flit": "uses_flit",
+        "poetry": "uses_poetry",
+        "hatch": "uses_hatchling",
+    }
+
+    for backend_name, info_key in backend_map.items():
+        if backend_name in build_backend:
+            info[info_key] = True
+            break
+
+    return info
+
+
+def _analyze_build_requirements(build_system: dict[str, _t.Any]) -> dict[str, _t.Any]:
+    """Analyze build requirements."""
+    info: dict[str, _t.Any] = {}
+    build_requires = build_system.get("requires", [])
+    if build_requires:
+        info["build_requires_count"] = len(build_requires)
+        # Check for compiled extensions
+        compiled_indicators = ["cython", "pybind", "numpy"]
+        if any(
+            indicator in req.lower()
+            for req in build_requires
+            for indicator in compiled_indicators
+        ):
+            info["has_compiled_extensions"] = True
+    return info
+
+
+def _analyze_tool_config(tool_config: dict[str, _t.Any]) -> dict[str, _t.Any]:
+    """Analyze tool configurations."""
+    info: dict[str, _t.Any] = {}
+    tool_names = [
+        "pytest",
+        "mypy",
+        "ruff",
+        "black",
+        "isort",
+        "flake8",
+        "bandit",
+        "coverage",
+    ]
+    detected_tools = [tool for tool in tool_names if tool in tool_config]
+
+    if detected_tools:
+        info["configured_tools"] = detected_tools
+        info["tool_count"] = len(detected_tools)
+
+    return info
+
+
+def _detect_dependency_patterns(project: dict[str, _t.Any]) -> dict[str, _t.Any]:
+    """Detect dependency patterns and constraints."""
+    info: dict[str, _t.Any] = {}
+
+    # Main dependencies analysis
+    dependencies = project.get("dependencies", [])
+    if dependencies:
+        info["dependency_count"] = len(dependencies)
+        info.update(_categorize_dependencies(dependencies))
+
+    # Optional dependencies analysis
+    optional_deps = project.get("optional-dependencies", {})
+    if optional_deps:
+        info.update(_analyze_optional_dependencies(optional_deps))
+
+    return info
+
+
+def _categorize_dependencies(dependencies: list[str]) -> dict[str, _t.Any]:
+    """Categorize dependencies by type."""
+    info: dict[str, _t.Any] = {}
+    ui_deps = [
+        "tkinter",
+        "qt",
+        "gtk",
+        "kivy",
+        "streamlit",
+        "gradio",
+        "dash",
+        "flask",
+        "django",
+        "fastapi",
+    ]
+    data_deps = [
+        "numpy",
+        "pandas",
+        "scipy",
+        "matplotlib",
+        "seaborn",
+        "plotly",
+        "scikit-learn",
+        "tensorflow",
+        "pytorch",
+        "torch",
+    ]
+    web_deps = ["requests", "httpx", "aiohttp", "urllib3", "beautifulsoup4", "selenium"]
+
+    categories = []
+    for dep in dependencies:
+        dep_name = _extract_dependency_name(dep)
+        if any(ui_dep in dep_name.lower() for ui_dep in ui_deps):
+            categories.append("ui")
+        elif any(data_dep in dep_name.lower() for data_dep in data_deps):
+            categories.append("data_science")
+        elif any(web_dep in dep_name.lower() for web_dep in web_deps):
+            categories.append("web")
+
+    if categories:
+        info["dependency_categories"] = list(set(categories))
+    return info
+
+
+def _extract_dependency_name(dep: str) -> str:
+    """Extract clean dependency name from requirement string."""
+    separators = [">=", "==", "~=", "<", ">", " "]
+    dep_name = dep
+    for sep in separators:
+        dep_name = dep_name.split(sep)[0]
+    return dep_name
+
+
+def _analyze_optional_dependencies(
+    optional_deps: dict[str, list[str]],
+) -> dict[str, _t.Any]:
+    """Analyze optional dependency groups."""
+    info: dict[str, _t.Any] = {}
+    info["optional_dep_groups"] = list(optional_deps.keys())
+    info["optional_dep_count"] = sum(len(deps) for deps in optional_deps.values())
+
+    # Common patterns
+    group_patterns = {
+        "has_dev_dependencies": ["dev", "development"],
+        "has_test_dependencies": ["test", "testing"],
+        "has_doc_dependencies": ["docs", "documentation"],
+    }
+
+    for info_key, patterns in group_patterns.items():
+        if any(pattern in optional_deps for pattern in patterns):
+            info[info_key] = True
+
+    return info
+
+
+def _detect_development_info(
+    _toml: dict[str, _t.Any], project_root: pathlib.Path
+) -> dict[str, _t.Any]:
+    """Detect development and testing configuration."""
+    info: dict[str, _t.Any] = {}
+
+    # Test directory detection
+    test_dirs = ["tests", "test", "testing"]
+    for test_dir in test_dirs:
+        test_path = project_root / test_dir
+        if test_path.exists() and test_path.is_dir():
+            info["test_dir"] = test_dir
+            # Count test files
+            test_files = list(test_path.glob("test_*.py")) + list(
+                test_path.glob("*_test.py")
+            )
+            if test_files:
+                info["test_file_count"] = len(test_files)
+            break
+
+    # Configuration files detection
+    config_files = {
+        "tox.ini": "tox",
+        "pytest.ini": "pytest",
+        ".pre-commit-config.yaml": "pre_commit",
+        "Makefile": "make",
+        "justfile": "just",
+        "noxfile.py": "nox",
+    }
+
+    detected_configs = []
+    for config_file, tool_name in config_files.items():
+        if (project_root / config_file).exists():
+            detected_configs.append(tool_name)
+
+    if detected_configs:
+        info["config_files"] = detected_configs
+
+    # CI/CD detection
+    ci_dirs = [".github/workflows", ".gitlab-ci", ".circleci"]
+    for ci_dir in ci_dirs:
+        ci_path = project_root / ci_dir
+        if ci_path.exists():
+            info["has_ci_cd"] = True
+            break
+
+    return info
+
+
+def _detect_metadata_patterns(
+    project: dict[str, _t.Any], project_root: pathlib.Path
+) -> dict[str, _t.Any]:
+    """Detect license and documentation patterns."""
+    info: dict[str, _t.Any] = {}
+
+    # License detection
+    info.update(_detect_license_info(project, project_root))
+
+    # Documentation detection
+    info.update(_detect_documentation_info(project, project_root))
+
+    # Repository URLs
+    info.update(_detect_repository_info(project))
+
+    return info
+
+
+def _detect_license_info(
+    project: dict[str, _t.Any], project_root: pathlib.Path
+) -> dict[str, _t.Any]:
+    """Detect license information."""
+    info: dict[str, _t.Any] = {}
+    license_info = project.get("license")
+
+    if not license_info:
+        return info
+
+    if isinstance(license_info, dict):
+        license_text = license_info.get("text", "")
+        license_file = license_info.get("file", "")
+        if license_text:
+            info["license_type"] = _classify_license(license_text)
+        elif license_file:
+            license_path = project_root / license_file
+            if license_path.exists():
+                info["license_file"] = license_file
+    elif isinstance(license_info, str):
+        info["license_type"] = _classify_license(license_info)
+
+    return info
+
+
+def _detect_documentation_info(
+    _project: dict[str, _t.Any], project_root: pathlib.Path
+) -> dict[str, _t.Any]:
+    """Detect documentation configuration."""
+    info: dict[str, _t.Any] = {}
+    doc_files = ["README.md", "README.rst", "README.txt", "docs"]
+
+    for doc_file in doc_files:
+        doc_path = project_root / doc_file
+        if doc_path.exists():
+            if doc_file == "docs" and doc_path.is_dir():
+                info["has_docs_dir"] = True
+                info.update(_detect_docs_generator(doc_path, project_root))
+            else:
+                info["readme_file"] = doc_file
+                break
+
+    return info
+
+
+def _detect_docs_generator(
+    docs_path: pathlib.Path, project_root: pathlib.Path
+) -> dict[str, _t.Any]:
+    """Detect documentation generator type."""
+    info: dict[str, _t.Any] = {}
+
+    if (docs_path / "conf.py").exists():
+        info["docs_generator"] = "sphinx"
+    elif (docs_path / "mkdocs.yml").exists() or (project_root / "mkdocs.yml").exists():
+        info["docs_generator"] = "mkdocs"
+
+    return info
+
+
+def _detect_repository_info(project: dict[str, _t.Any]) -> dict[str, _t.Any]:
+    """Detect repository hosting information."""
+    info: dict[str, _t.Any] = {}
+    urls = project.get("urls", {})
+
+    if not urls:
+        return info
+
+    repo_url = urls.get("repository") or urls.get("Repository")
+    if repo_url:
+        hosting_map = {
+            "github.com": "github",
+            "gitlab.com": "gitlab",
+            "bitbucket.org": "bitbucket",
+        }
+
+        for domain, host_name in hosting_map.items():
+            if domain in repo_url:
+                info["hosted_on"] = host_name
+                break
+
+    return info
+
+
+def _classify_license(license_text: str) -> str:
+    """Classify license type from license text."""
+    license_lower = license_text.lower()
+
+    if "mit" in license_lower:
+        return "MIT"
+    elif "apache" in license_lower:
+        return "Apache"
+    elif "bsd" in license_lower:
+        return "BSD"
+    elif "lgpl" in license_lower or "lesser general public license" in license_lower:
+        return "LGPL"
+    elif "gpl" in license_lower or "general public license" in license_lower:
+        return "GPL"
+    elif "mozilla" in license_lower or "mpl" in license_lower:
+        return "MPL"
+    else:
+        return "Other"
 
 
 def _detect_platform_variants(toml: dict) -> dict[str, _t.Any]:
