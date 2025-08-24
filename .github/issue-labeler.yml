@@ -1,0 +1,56 @@
+# Configuration for issue labeling based on content
+# See https://github.com/github/issue-labeler
+
+bug:
+  - "bug"
+  - "error"
+  - "exception"
+  - "crash"
+  - "fail"
+  - "broken"
+  - "not working"
+  - "doesn't work"
+
+enhancement:
+  - "feature"
+  - "enhancement"
+  - "improvement"
+  - "request"
+  - "add"
+  - "support"
+  - "would like"
+  - "could we"
+
+documentation:
+  - "documentation"
+  - "docs"
+  - "readme"
+  - "guide"
+  - "tutorial"
+  - "example"
+  - "help"
+
+question:
+  - "question"
+  - "how to"
+  - "how do"
+  - "what is"
+  - "why"
+  - "confused"
+
+performance:
+  - "performance"
+  - "slow"
+  - "fast"
+  - "speed"
+  - "optimization"
+  - "memory"
+  - "cpu"
+
+security:
+  - "security"
+  - "vulnerability"
+  - "exploit"
+  - "attack"
+  - "unsafe"
+  - "credential"
