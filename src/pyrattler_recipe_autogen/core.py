@@ -373,19 +373,77 @@ def build_source_section(toml: dict) -> dict:
     return _t.cast(dict, section)
 
 
+def _detect_build_script(build_system: dict) -> str:
+    """Auto-detect appropriate build script based on build backend."""
+    backend = build_system.get("build-backend", "")
+
+    if "poetry" in backend:
+        return "poetry build && $PYTHON -m pip install dist/*.whl -vv"
+    elif "flit" in backend:
+        return "$PYTHON -m flit install"
+    elif "hatchling" in backend or "hatch" in backend:
+        return "$PYTHON -m pip install . -vv --no-build-isolation"
+    else:
+        return "$PYTHON -m pip install . -vv --no-build-isolation"
+
+
+def _detect_entry_points(project: dict) -> list[str]:
+    """Auto-detect entry points from project.scripts."""
+    project_scripts = project.get("scripts", {})
+    if project_scripts:
+        return [f"{name} = {target}" for name, target in project_scripts.items()]
+    return []
+
+
+def _detect_skip_conditions(requires_python: str) -> list[str]:
+    """Auto-detect skip conditions for Python version constraints."""
+    if not requires_python:
+        return []
+
+    # Handle cases like ">=3.9", "<3.13", ">=3.9,<4.0"
+    min_match = re.search(r">=\s*(\d+)\.(\d+)", requires_python)
+    max_match = re.search(r"<\s*(\d+)\.(\d+)", requires_python)
+
+    skip_conditions = []
+    if min_match:
+        min_major, min_minor = min_match.groups()
+        # Skip versions below minimum
+        skip_conditions.append(f"py<{min_major}{min_minor}")
+
+    if max_match:
+        max_major, max_minor = max_match.groups()
+        # Skip versions at or above maximum
+        skip_conditions.append(f"py>={max_major}{max_minor}")
+
+    return skip_conditions
+
+
 def build_build_section(toml: dict) -> dict:
-    """Build the build section of the recipe."""
+    """Build the build section of the recipe with enhanced auto-detection."""
     # Get configuration from tool.conda.recipe.build
     section = _toml_get(toml, "tool.conda.recipe.build", {})
 
-    # Apply defaults for missing fields
+    # Enhanced defaults and auto-detection
     if "script" not in section:
-        section["script"] = "$PYTHON -m pip install . -vv --no-build-isolation"
+        build_system = toml.get("build-system", {})
+        section["script"] = _detect_build_script(build_system)
 
     if "number" not in section:
         section["number"] = 0
 
-    # Note: string fields are left out if missing (no default applied)
+    # Auto-detect entry points from project.scripts
+    if "entry_points" not in section:
+        project = toml.get("project", {})
+        entry_points = _detect_entry_points(project)
+        if entry_points:
+            section["entry_points"] = entry_points
+
+    # Auto-detect skip conditions for Python version constraints
+    if "skip" not in section:
+        requires_python = toml.get("project", {}).get("requires-python", "")
+        skip_conditions = _detect_skip_conditions(requires_python)
+        if skip_conditions:
+            section["skip"] = skip_conditions
 
     return _t.cast(dict, section)
 

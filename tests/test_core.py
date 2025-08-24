@@ -331,6 +331,136 @@ def test_build_build_section():
     assert result["noarch"] == "python"
 
 
+def test_build_build_section_poetry_backend():
+    """Test build section with poetry backend auto-detection."""
+    toml_data = {"build-system": {"build-backend": "poetry.core.masonry.api"}}
+    result = build_build_section(toml_data)
+    assert result["script"] == "poetry build && $PYTHON -m pip install dist/*.whl -vv"
+
+
+def test_build_build_section_flit_backend():
+    """Test build section with flit backend auto-detection."""
+    toml_data = {"build-system": {"build-backend": "flit_core.buildapi"}}
+    result = build_build_section(toml_data)
+    assert result["script"] == "$PYTHON -m flit install"
+
+
+def test_build_build_section_hatchling_backend():
+    """Test build section with hatchling backend auto-detection."""
+    toml_data = {"build-system": {"build-backend": "hatchling.build"}}
+    result = build_build_section(toml_data)
+    assert result["script"] == "$PYTHON -m pip install . -vv --no-build-isolation"
+
+
+def test_build_build_section_entry_points():
+    """Test build section with entry points auto-detection."""
+    toml_data = {
+        "project": {
+            "scripts": {"my-cli": "mypackage.cli:main", "my-tool": "mypackage.tool:run"}
+        }
+    }
+    result = build_build_section(toml_data)
+    assert result["entry_points"] == [
+        "my-cli = mypackage.cli:main",
+        "my-tool = mypackage.tool:run",
+    ]
+
+
+def test_build_build_section_skip_conditions():
+    """Test build section with skip conditions auto-detection."""
+    # Test minimum Python version only
+    toml_data = {"project": {"requires-python": ">=3.9"}}
+    result = build_build_section(toml_data)
+    assert result["skip"] == ["py<39"]
+
+    # Test maximum Python version only
+    toml_data = {"project": {"requires-python": "<3.12"}}
+    result = build_build_section(toml_data)
+    assert result["skip"] == ["py>=312"]
+
+    # Test both minimum and maximum
+    toml_data = {"project": {"requires-python": ">=3.9,<3.12"}}
+    result = build_build_section(toml_data)
+    assert result["skip"] == ["py<39", "py>=312"]
+
+
+def test_build_build_section_no_skip_override():
+    """Test that explicit skip configuration is not overridden."""
+    toml_data = {
+        "project": {"requires-python": ">=3.9"},
+        "tool": {"conda": {"recipe": {"build": {"skip": ["win"]}}}},
+    }
+    result = build_build_section(toml_data)
+    assert result["skip"] == ["win"]  # Should not add py<39
+
+
+def test_detect_build_script():
+    """Test _detect_build_script helper function."""
+    from pyrattler_recipe_autogen.core import _detect_build_script
+
+    # Test poetry
+    build_system = {"build-backend": "poetry.core.masonry.api"}
+    assert (
+        _detect_build_script(build_system)
+        == "poetry build && $PYTHON -m pip install dist/*.whl -vv"
+    )
+
+    # Test flit
+    build_system = {"build-backend": "flit_core.buildapi"}
+    assert _detect_build_script(build_system) == "$PYTHON -m flit install"
+
+    # Test hatchling
+    build_system = {"build-backend": "hatchling.build"}
+    assert (
+        _detect_build_script(build_system)
+        == "$PYTHON -m pip install . -vv --no-build-isolation"
+    )
+
+    # Test default
+    build_system = {"build-backend": "setuptools.build_meta"}
+    assert (
+        _detect_build_script(build_system)
+        == "$PYTHON -m pip install . -vv --no-build-isolation"
+    )
+
+
+def test_detect_entry_points():
+    """Test _detect_entry_points helper function."""
+    from pyrattler_recipe_autogen.core import _detect_entry_points
+
+    # Test with scripts
+    project = {
+        "scripts": {"my-cli": "mypackage.cli:main", "my-tool": "mypackage.tool:run"}
+    }
+    result = _detect_entry_points(project)
+    assert result == ["my-cli = mypackage.cli:main", "my-tool = mypackage.tool:run"]
+
+    # Test without scripts
+    project = {}
+    result = _detect_entry_points(project)
+    assert result == []
+
+
+def test_detect_skip_conditions():
+    """Test _detect_skip_conditions helper function."""
+    from pyrattler_recipe_autogen.core import _detect_skip_conditions
+
+    # Test minimum version only
+    assert _detect_skip_conditions(">=3.9") == ["py<39"]
+
+    # Test maximum version only
+    assert _detect_skip_conditions("<3.12") == ["py>=312"]
+
+    # Test both min and max
+    assert _detect_skip_conditions(">=3.9,<3.12") == ["py<39", "py>=312"]
+
+    # Test empty string
+    assert _detect_skip_conditions("") == []
+
+    # Test with spaces
+    assert _detect_skip_conditions(">= 3.10 , < 3.13") == ["py<310", "py>=313"]
+
+
 def test_build_requirements_section_basic():
     """Test building requirements section with basic dependencies."""
     toml_data = {"project": {"dependencies": ["numpy>=1.0", "pandas"]}}
