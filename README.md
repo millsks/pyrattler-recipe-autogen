@@ -1,6 +1,7 @@
 # pyrattler-recipe-autogen
 
-Automatically generates recipe.yaml files for rattler-build directly from your Python project's pyproject.toml, eliminating the need for manual recipe creation. Features intelligent auto-detection, advanced dependency management, and comprehensive integration support.
+Automatically generates recipe.yaml files for rattler-build directly from your Python project's pyproject.toml, eliminating the need for manual recipe creation.
+Features intelligent auto-detection, advanced dependency management, and comprehensive integration support.
 
 [![Test Coverage](https://img.shields.io/badge/coverage-97%25-brightgreen)](https://github.com/millsks/pyrattler-recipe-autogen)
 [![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)](https://python.org)
@@ -557,6 +558,13 @@ Check current version: `pixi run version`
 
 We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
 
+### 📚 Documentation
+
+- **[Release Process](RELEASE_PROCESS.md)**: Complete guide for creating and publishing releases
+- **[Contributing Guidelines](CONTRIBUTING.md)**: Development setup and contribution workflow
+- **[Security Policy](SECURITY.md)**: How to report security vulnerabilities
+- **[Changelog](CHANGELOG.md)**: Release history and version changes
+
 ### Quick Start for Contributors
 
 1. **Fork and Clone**:
@@ -883,22 +891,20 @@ This project uses `hatch-vcs` for automatic version management based on git tags
 
 #### Creating a Release
 
-1. Create and push a git tag:
+**For maintainers**: Use the streamlined release workflow in GitHub Actions.
 
-   ```bash
-   git tag v1.0.0
-   git push origin v1.0.0
-   ```
+1. **Go to Actions** → "Release and Publish" workflow
+2. **Click "Run workflow"** and fill in the form:
+   - Version (e.g., `1.0.0`)
+   - Pre-release checkbox (for alpha/beta)
+   - Publishing options (PyPI, Test PyPI)
+3. **Wait for completion** - everything is automated!
 
-2. Create a GitHub release from the tag, which will automatically:
-   - Build the package
-   - Run all tests and checks
-   - Publish to PyPI
-   - Update the changelog
+**For complete details**: See [RELEASE_PROCESS.md](RELEASE_PROCESS.md)
 
 #### Test Publishing
 
-For testing the publishing process, use the manual workflow dispatch in GitHub Actions, which publishes to Test PyPI with development versions.
+The release workflow includes optional Test PyPI publishing for verification before production release.
 
 ### Contributing
 
