@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.7] - 2025-08-24
+
+### ⚙️ Miscellaneous Tasks
+
+- Extract release notes from CHANGELOG.md for GitHub releases
+
+### 📚 Documentation
+
+- Add comprehensive badges to README.md
+
 ## [0.9.6] - 2025-08-24
 
 ### 📚 Documentation
