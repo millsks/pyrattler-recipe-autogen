@@ -148,22 +148,56 @@ jobs:
       - name: Generate release notes
         id: release_notes
         run: |
-          cat << EOF >> $GITHUB_OUTPUT
+          # Extract changelog content for this version
+          VERSION="${{ inputs.version }}"
+
+          # Check if CHANGELOG.md exists and has content for this version
+          if [ -f "CHANGELOG.md" ]; then
+            # Extract section for this version from CHANGELOG.md
+            CHANGELOG_SECTION=$(awk "/^## \[${VERSION}\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md)
+
+            if [ -n "$CHANGELOG_SECTION" ]; then
+              # Use changelog content
+              cat << EOF >> $GITHUB_OUTPUT
+          notes<<RELEASE_NOTES
+          ## [${VERSION}] - $(date +%Y-%m-%d)
+
+          ${CHANGELOG_SECTION}
+
+          ---
+
+          ## Installation
+
+          \`\`\`bash
+          pip install pyrattler-recipe-autogen==${{ inputs.version }}
+          \`\`\`
+
+          ## Verification
+
+          \`\`\`bash
+          python -c "import pyrattler_recipe_autogen; print(pyrattler_recipe_autogen.__version__)"
+          \`\`\`
+
+          📝 **Full changelog**: [CHANGELOG.md](https://github.com/millsks/pyrattler-recipe-autogen/blob/main/CHANGELOG.md)
+          RELEASE_NOTES
+          EOF
+            else
+              echo "⚠️ No changelog entry found for version ${VERSION}, using fallback"
+              # Fallback to generic notes
+              cat << EOF >> $GITHUB_OUTPUT
           notes<<RELEASE_NOTES
           Release v${{ inputs.version }}
 
           ## Changes in this release
 
+          ⚠️ **No specific changelog entry found for this version.**
+
+          Please check the [full changelog](https://github.com/millsks/pyrattler-recipe-autogen/blob/main/CHANGELOG.md) for details.
+
           ### Package Information
           - Version: ${{ inputs.version }}
           - Build date: $(date)
           - Commit: ${{ github.sha }}
-
-          ### Quality Metrics
-          - All tests passed ✅
-          - Security checks passed ✅
-          - Type checking passed ✅
-          - Linting passed ✅
 
           ## Installation
 
@@ -178,6 +212,27 @@ jobs:
           \`\`\`
           RELEASE_NOTES
           EOF
+            fi
+          else
+            echo "⚠️ CHANGELOG.md not found, using fallback"
+            # Fallback when no CHANGELOG.md exists
+            cat << EOF >> $GITHUB_OUTPUT
+          notes<<RELEASE_NOTES
+          Release v${{ inputs.version }}
+
+          ### Package Information
+          - Version: ${{ inputs.version }}
+          - Build date: $(date)
+          - Commit: ${{ github.sha }}
+
+          ## Installation
+
+          \`\`\`bash
+          pip install pyrattler-recipe-autogen==${{ inputs.version }}
+          \`\`\`
+          RELEASE_NOTES
+          EOF
+          fi
 
       - name: Create GitHub Release
         id: create_release
