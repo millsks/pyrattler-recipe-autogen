@@ -1,0 +1,38 @@
+# CODEOWNERS file for pyrattler-recipe-autogen
+# This file defines who is responsible for reviewing changes to specific files or directories.
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global ownership - @millsks owns the entire repository by default
+* @millsks
+
+# Core source code - require review from maintainers
+/src/ @millsks
+/tests/ @millsks
+
+# Configuration files - require careful review
+pyproject.toml @millsks
+pixi.lock @millsks
+recipe.yaml @millsks
+/recipe/ @millsks
+
+# CI/CD workflows - critical infrastructure
+/.github/ @millsks
+/.github/workflows/ @millsks
+
+# Documentation - allow broader contribution but still require review
+README.md @millsks
+CONTRIBUTING.md @millsks
+CHANGELOG.md @millsks
+*.md @millsks
+
+# Security and compliance
+bandit-report.json @millsks
+sonar-project.properties @millsks
+
+# Package configuration
+MANIFEST.in @millsks
+LICENSE @millsks
+
+# Development environment
+.gitignore @millsks
+.pre-commit-config.yaml @millsks

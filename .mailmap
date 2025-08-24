@@ -1,0 +1,21 @@
+# .mailmap file for pyrattler-recipe-autogen
+# This file maps author/committer names and email addresses to canonical forms.
+# Format: Proper Name <proper@email.xx> <commit@email.xx>
+# See: https://git-scm.com/docs/gitmailmap
+
+# Main repository owner - add any alternate emails or name variations here
+Kevin Mills <millsks@gmail.com>
+# Add any alternate emails or name variations here:
+# Kevin Mills <millsks@gmail.com> <alternate@email.com>
+# Kevin Mills <millsks@gmail.com> <work@email.com>
+
+# GitHub Actions and automated commits
+GitHub Action <action@github.com> <action@github.com>
+github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+
+# Common automated commit patterns
+dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+# Add entries for any contributors with multiple identities
+# Contributor Name <canonical@email.com> <alternate@email.com>
