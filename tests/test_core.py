@@ -764,9 +764,9 @@ def test_is_archive_url():
         assert _is_archive_url(url), f"Expected {url} to be detected as archive URL"
 
     for url in non_archive_urls:
-        assert not _is_archive_url(
-            url
-        ), f"Expected {url} to NOT be detected as archive URL"
+        assert not _is_archive_url(url), (
+            f"Expected {url} to NOT be detected as archive URL"
+        )
 
 
 def test_build_source_section_priority():
