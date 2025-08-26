@@ -4,21 +4,21 @@
 # Source code changes
 "area/core":
   - "src/pyrattler_recipe_autogen/core.py"
-  - "src/pyrattler_recipe_autogen/core/**/*"
+  - "src/pyrattler_recipe_autogen/core/**"
 
 "area/cli":
   - "src/pyrattler_recipe_autogen/cli.py"
-  - "src/pyrattler_recipe_autogen/cli/**/*"
+  - "src/pyrattler_recipe_autogen/cli/**"
 
 # Test changes
 "area/tests":
-  - "tests/**/*"
+  - "tests/**"
 
 # Documentation changes
 "area/docs":
   - "*.md"
-  - "docs/**/*"
-  - ".github/ISSUE_TEMPLATE/**/*"
+  - "docs/**"
+  - ".github/ISSUE_TEMPLATE/**"
   - ".github/pull_request_template.md"
   - ".github/copilot-instructions.md"
 
@@ -31,7 +31,7 @@
 
 # CI/CD changes
 "area/ci":
-  - ".github/workflows/**/*"
+  - ".github/workflows/**"
   - ".github/dependabot.yml"
 
 # Dependencies
