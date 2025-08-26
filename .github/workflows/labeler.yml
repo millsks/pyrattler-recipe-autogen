@@ -23,6 +23,7 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           configuration-path: .github/issue-labeler.yml
+          enable-versioned-regex: false
 
       - name: Label PRs by file changes
         if: github.event_name == 'pull_request'
