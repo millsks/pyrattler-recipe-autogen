@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.9] - 2025-08-26
+
+### ⚙️ Miscellaneous Tasks
+
+- **deps**: Bump peter-evans/create-pull-request from 6 to 7 (#8)
+- **deps**: Bump actions/checkout from 4 to 5 (#9)
+- **deps**: Bump codecov/codecov-action from 5.4.3 to 5.5.0 (#10)
+
+### 🐛 Bug Fixes
+
+- Add missing enable-versioned-regex parameter to labeler workflow
+
 ## [0.9.8] - 2025-08-24
 
 ### 🐛 Bug Fixes
