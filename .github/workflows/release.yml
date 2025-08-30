@@ -234,4 +234,17 @@ jobs:
           draft: false
           prerelease: ${{ github.event.inputs.prerelease }}
           files: dist/*
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RELEASE_PAT }}
+
+      - name: Verify publish workflow trigger
+        run: |
+          echo "✅ Release created: ${{ steps.create_release.outputs.url }}"
+          echo "🔄 The publish workflow should trigger automatically when the release is published"
+          echo "📋 Check the Actions tab for the 'Publish to PyPI' workflow"
+
+          # Verify the publish workflow file exists
+          if [ -f ".github/workflows/publish.yml" ]; then
+            echo "✅ Publish workflow file exists"
+          else
+            echo "❌ Publish workflow file not found!"
+          fi
