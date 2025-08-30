@@ -5,7 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.9.9] - 2025-08-26
+## [0.10.0] - 2025-08-30
+
+### ⭐ Features
+
+- Split release workflow into separate release and publish workflows
+
+### 🐛 Bug Fixes
+
+- Resolve actionlint shellcheck warnings and add standalone actionlint task
+
+### 📚 Documentation
+
+- Add comprehensive documentation for workflow split
+
+### 🚜 Refactor
+
+- **release**: Remove unused publish options and add package check step
+
+## [0.9.9] - 2025-08-29
 
 ### ⚙️ Miscellaneous Tasks
 
