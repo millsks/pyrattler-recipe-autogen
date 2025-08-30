@@ -1,0 +1,99 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pyrattler-recipe-autogen
+    permissions:
+      contents: read
+      id-token: write # For trusted publishing
+
+    steps:
+      - name: Download release artifacts
+        uses: robinraju/release-downloader@v1.11
+        with:
+          repository: ${{ github.repository }}
+          tag: ${{ github.event.release.tag_name }}
+          fileName: "*"
+          out-file-path: "dist"
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify downloaded artifacts
+        run: |
+          ls -la dist/
+          echo "✅ Downloaded release artifacts"
+
+      - name: Setup pixi (for twine check)
+        uses: prefix-dev/setup-pixi@v0.9.0
+        with:
+          pixi-version: v0.52.0
+
+      - name: Verify package integrity
+        run: |
+          pixi run twine check dist/*
+          echo "✅ Package integrity verified"
+
+      - name: Publish to Test PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          verbose: true
+          print-hash: true
+
+      - name: Wait for Test PyPI to update
+        run: |
+          echo "⏳ Waiting 60 seconds for Test PyPI to process the upload..."
+          sleep 60
+
+      - name: Test installation from Test PyPI
+        run: |
+          python -m pip install --upgrade pip
+          # Extract version from tag (remove 'v' prefix)
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="${VERSION#v}"
+          # Try to install from Test PyPI with retries
+          max_attempts=3
+          attempt=1
+          while [ "$attempt" -le "$max_attempts" ]; do
+            echo "🔄 Installation attempt $attempt/$max_attempts"
+            if pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ "pyrattler-recipe-autogen==${VERSION}"; then
+              echo "✅ Successfully installed from Test PyPI"
+              break
+            elif [ "$attempt" -eq "$max_attempts" ]; then
+              echo "❌ Failed to install from Test PyPI after $max_attempts attempts"
+              exit 1
+            else
+              echo "⚠️ Installation failed, retrying in 30 seconds..."
+              sleep 30
+              attempt=$((attempt + 1))
+            fi
+          done
+
+      - name: Verify installation
+        run: |
+          python -c "import pyrattler_recipe_autogen; print(f'✅ Import successful, version: {pyrattler_recipe_autogen.__version__}')"
+          echo "✅ Test PyPI installation verified"
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          verbose: true
+          print-hash: true
+
+      - name: Verify PyPI publication
+        run: |
+          # Extract version from tag (remove 'v' prefix)
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION=${VERSION#v}
+          echo "🎉 Package published to PyPI successfully!"
+          echo "📦 Package: https://pypi.org/project/pyrattler-recipe-autogen/${VERSION}/"
+          echo "📚 Installation: pip install pyrattler-recipe-autogen==${VERSION}"

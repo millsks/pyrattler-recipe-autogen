@@ -1,4 +1,4 @@
-name: Release and Publish
+name: Release
 
 on:
   workflow_dispatch:
@@ -19,16 +19,12 @@ on:
         default: false
 
 jobs:
-  release-and-publish:
-    name: Release and Publish
+  release:
+    name: Create Release
     runs-on: ubuntu-latest
-    environment:
-      name: pypi
-      url: https://pypi.org/p/pyrattler-recipe-autogen
     permissions:
       contents: write
       pull-requests: write
-      id-token: write # For trusted publishing
 
     steps:
       - name: Checkout code
@@ -239,19 +235,3 @@ jobs:
           prerelease: ${{ github.event.inputs.prerelease }}
           files: dist/*
           token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Publish to Test PyPI
-        if: github.event_name == 'workflow_dispatch'
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
-          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-          verbose: true
-
-      - name: Publish to PyPI
-        if: github.event_name == 'release'
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
-          verbose: true
-          print-hash: true
