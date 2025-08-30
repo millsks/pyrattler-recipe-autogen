@@ -177,6 +177,7 @@ ruff = "*"
 mypy = "*"
 bandit = "*"
 safety = "*"
+actionlint = "*"
 
 [tool.pixi.environments]
 default = { features = ["dev"], solve-group = "default" }
@@ -222,8 +223,9 @@ format = "ruff check --fix --exit-non-zero-on-fix src/ tests/ && ruff format src
 lint = "ruff check src/ tests/"
 type-check = "mypy src/pyrattler_recipe_autogen/"
 security-check = "bandit -r src/ -c pyproject.toml && safety check --json"
+actionlint = "actionlint .github/workflows/*.yml"
 check = { depends-on = ["lint", "type-check"] }
-check-all = { depends-on = ["lint", "type-check", "security-check"] }
+check-all = { depends-on = ["lint", "type-check", "security-check", "actionlint"] }
 
 [tool.pixi.feature.dev.tasks]
 ci = { depends-on = ["check-all", "test-cov", "build"] }
