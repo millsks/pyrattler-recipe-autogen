@@ -16,6 +16,9 @@ jobs:
       id-token: write # For trusted publishing
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
       - name: Debug release event
         run: |
           echo "🔍 Release event debugging information:"
