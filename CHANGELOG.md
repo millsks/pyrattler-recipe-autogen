@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🐛 Bug Fixes
 
 - Resolve actionlint shellcheck warnings and add standalone actionlint task
+- Ensure publish workflow triggers after release creation
 
 ### 📚 Documentation
 
