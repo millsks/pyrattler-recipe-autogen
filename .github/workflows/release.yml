@@ -12,16 +12,6 @@ on:
         required: false
         type: boolean
         default: false
-      publish_to_pypi:
-        description: "Publish to PyPI"
-        required: false
-        type: boolean
-        default: true
-      publish_to_test_pypi:
-        description: "Also publish to Test PyPI"
-        required: false
-        type: boolean
-        default: false
       force_recreate:
         description: "Remove existing tag/release if it exists before creating new one"
         required: false
@@ -118,6 +108,10 @@ jobs:
       - name: Build package
         run: pixi run build
 
+      - name: Check package
+        run: |
+          pixi run twine check dist/*
+
       - name: Create temporary tag for changelog generation
         run: |
           git config user.name "github-actions[bot]"
@@ -154,11 +148,11 @@ jobs:
           # Check if CHANGELOG.md exists and has content for this version
           if [ -f "CHANGELOG.md" ]; then
             # Extract section for this version from CHANGELOG.md
-            CHANGELOG_SECTION=$(awk "/^## \[${VERSION}\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md)
+            CHANGELOG_SECTION=$(awk "/^## \\[${VERSION}\\]/{flag=1; next} /^## \\[/{flag=0} flag" CHANGELOG.md)
 
             if [ -n "$CHANGELOG_SECTION" ]; then
               # Use changelog content
-              cat << EOF >> $GITHUB_OUTPUT
+              cat << EOF >> "$GITHUB_OUTPUT"
           notes<<RELEASE_NOTES
           ## [${VERSION}] - $(date +%Y-%m-%d)
 
@@ -184,7 +178,7 @@ jobs:
             else
               echo "⚠️ No changelog entry found for version ${VERSION}, using fallback"
               # Fallback to generic notes
-              cat << EOF >> $GITHUB_OUTPUT
+              cat << EOF >> "$GITHUB_OUTPUT"
           notes<<RELEASE_NOTES
           Release v${{ inputs.version }}
 
@@ -216,7 +210,7 @@ jobs:
           else
             echo "⚠️ CHANGELOG.md not found, using fallback"
             # Fallback when no CHANGELOG.md exists
-            cat << EOF >> $GITHUB_OUTPUT
+            cat << EOF >> "$GITHUB_OUTPUT"
           notes<<RELEASE_NOTES
           Release v${{ inputs.version }}
 
@@ -247,16 +241,17 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to Test PyPI
-        if: inputs.publish_to_test_pypi == true
+        if: github.event_name == 'workflow_dispatch'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
           verbose: true
-          print-hash: true
 
       - name: Publish to PyPI
-        if: inputs.publish_to_pypi == true
+        if: github.event_name == 'release'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
           verbose: true
           print-hash: true
