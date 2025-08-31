@@ -226,6 +226,7 @@ tomli = "*"
 pyyaml = "*"
 hatch = "*"
 nodejs = "*"
+virtualenv = ">=20.26.6"  # Fixes PVE-2024-73456
 
 [tool.pixi.feature.test.tasks]
 test = "pytest tests/"
