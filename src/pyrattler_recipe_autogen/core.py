@@ -23,7 +23,7 @@ if importlib.util.find_spec("tomllib") is not None:
     import tomllib
     # safe to use tomllib.load(...)
 else:
-    import tomli as tomllib  # fallback for older Python
+    import tomli as tomllib  # fallback for older Python.   # noqa: F401
 
 # Note: setuptools_scm import handled locally in resolve_dynamic_version()
 

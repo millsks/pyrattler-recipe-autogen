@@ -84,13 +84,13 @@ repos:
       - id: markdownlint
         args: [--fix]
 
-  # YAML/JSON/Markdown formatting with prettier (using archived but stable version)
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v4.0.0-alpha.8
-    hooks:
-      - id: prettier
-        files: \.(yaml|yml|json|md)$
-        args: [--write]
+  # # YAML/JSON/Markdown formatting with prettier (using archived but stable version)
+  # - repo: https://github.com/pre-commit/mirrors-prettier
+  #   rev: v4.0.0-alpha.8
+  #   hooks:
+  #     - id: prettier
+  #       files: \.(yaml|yml|json|md)$
+  #       args: [--write]
 
   # GitHub Actions workflow linting
   - repo: https://github.com/rhysd/actionlint

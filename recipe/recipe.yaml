@@ -33,6 +33,7 @@ requirements:
   run:
   - python >=3.9,<4
   - pyyaml
+  - toml
   - if: python <3.11
     then:
       - tomli
