@@ -3,46 +3,54 @@
 
 # Source code changes
 area/core:
-  - src/pyrattler_recipe_autogen/core.py
-  - src/pyrattler_recipe_autogen/core/**
+  - changed-files:
+      - any-glob-to-any-file: src/pyrattler_recipe_autogen/core.py
+      - any-glob-to-any-file: src/pyrattler_recipe_autogen/core/**
 
 area/cli:
-  - src/pyrattler_recipe_autogen/cli.py
-  - src/pyrattler_recipe_autogen/cli/**
+  - changed-files:
+      - any-glob-to-any-file: src/pyrattler_recipe_autogen/cli.py
+      - any-glob-to-any-file: src/pyrattler_recipe_autogen/cli/**
 
 # Test changes
 area/tests:
-  - tests/**
+  - changed-files:
+      - any-glob-to-any-file: tests/**
 
 # Documentation changes
 area/docs:
-  - "*.md"
-  - docs/**
-  - .github/ISSUE_TEMPLATE/**
-  - .github/pull_request_template.md
-  - .github/copilot-instructions.md
+  - changed-files:
+      - any-glob-to-any-file: "*.md"
+      - any-glob-to-any-file: docs/**
+      - any-glob-to-any-file: .github/ISSUE_TEMPLATE/**
+      - any-glob-to-any-file: .github/pull_request_template.md
+      - any-glob-to-any-file: .github/copilot-instructions.md
 
 # Configuration changes
 area/config:
-  - pyproject.toml
-  - .pre-commit-config.yaml
-  - .gitignore
-  - pixi.lock
+  - changed-files:
+      - any-glob-to-any-file: pyproject.toml
+      - any-glob-to-any-file: .pre-commit-config.yaml
+      - any-glob-to-any-file: .gitignore
+      - any-glob-to-any-file: pixi.lock
 
 # CI/CD changes
 area/ci:
-  - .github/workflows/**
-  - .github/dependabot.yml
+  - changed-files:
+      - any-glob-to-any-file: .github/workflows/**
+      - any-glob-to-any-file: .github/dependabot.yml
 
 # Dependencies
 dependencies:
-  - pyproject.toml
-  - pixi.lock
-  - .pre-commit-config.yaml
+  - changed-files:
+      - any-glob-to-any-file: pyproject.toml
+      - any-glob-to-any-file: pixi.lock
+      - any-glob-to-any-file: .pre-commit-config.yaml
 
 # Security related
 security:
-  - SECURITY.md
-  - .github/ISSUE_TEMPLATE/security_report.yml
-  - bandit-report.json
-  - safety-report.json
+  - changed-files:
+      - any-glob-to-any-file: SECURITY.md
+      - any-glob-to-any-file: .github/ISSUE_TEMPLATE/security_report.yml
+      - any-glob-to-any-file: bandit-report.json
+      - any-glob-to-any-file: safety-report.json
