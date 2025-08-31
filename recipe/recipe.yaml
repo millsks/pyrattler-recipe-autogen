@@ -3,17 +3,15 @@ schema_version: 1
 
 context:
   name: pyrattler-recipe-autogen
-  version: ${{ env.get("HATCH_VERSION", default="0.0.0+local") }}
-  #version: '0.10.3'
+  version: '0.10.5'
 
 package:
   name: ${{ name }}
   version: ${{ version }}
 
 source:
-  path: ..
-  # url: https://pypi.org/packages/source/${{ name[0] }}/${{ name }}/pyrattler_recipe_autogen-${{ version }}.tar.gz
-  # sha256: 0555b815454b329cbd0efbb545426461f65581af9a056082127f576662e0f126
+  url: https://pypi.org/packages/source/${{ name[0] }}/${{ name }}/pyrattler_recipe_autogen-${{ version }}.tar.gz
+  sha256: f12d5d655f25eed5aa8e41e769be414c903d65fe842c25ef51a88f4d873a641f
 
 build:
   number: 0
@@ -25,31 +23,27 @@ build:
 
 requirements:
   host:
-  - python 3.9.*
+  - python ${{ python_min }}.*
   - pip
-  - python-build
   - hatchling
   - hatch-vcs
   run:
-  - python >=3.9,<4
+  - python >=${{ python_min }},<4
   - pyyaml
   - toml
-  - if: python <3.11
-    then:
-      - tomli
-      - types-toml
-      - types-PyYAML
+  - tomli
+  - types-toml
+  - types-PyYAML
 
 tests:
   - python:
       imports:
         - pyrattler_recipe_autogen
       pip_check: true
-      python_version: 3.9.*
+      python_version: ${{ python_min }}.*
   - requirements:
       run:
-        - python 3.9.*
-        - toml
+        - python ${{ python_min }}.*
     script:
       - pyrattler-recipe-autogen --help
 
