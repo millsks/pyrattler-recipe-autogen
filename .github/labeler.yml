@@ -3,46 +3,46 @@
 
 # Source code changes
 area/core:
-  - "src/pyrattler_recipe_autogen/core.py"
-  - "src/pyrattler_recipe_autogen/core/**"
+  - src/pyrattler_recipe_autogen/core.py
+  - src/pyrattler_recipe_autogen/core/**
 
 area/cli:
-  - "src/pyrattler_recipe_autogen/cli.py"
-  - "src/pyrattler_recipe_autogen/cli/**"
+  - src/pyrattler_recipe_autogen/cli.py
+  - src/pyrattler_recipe_autogen/cli/**
 
 # Test changes
 area/tests:
-  - "tests/**"
+  - tests/**
 
 # Documentation changes
 area/docs:
   - "*.md"
-  - "docs/**"
-  - ".github/ISSUE_TEMPLATE/**"
-  - ".github/pull_request_template.md"
-  - ".github/copilot-instructions.md"
+  - docs/**
+  - .github/ISSUE_TEMPLATE/**
+  - .github/pull_request_template.md
+  - .github/copilot-instructions.md
 
 # Configuration changes
 area/config:
-  - "pyproject.toml"
-  - ".pre-commit-config.yaml"
-  - ".gitignore"
-  - "pixi.lock"
+  - pyproject.toml
+  - .pre-commit-config.yaml
+  - .gitignore
+  - pixi.lock
 
 # CI/CD changes
 area/ci:
-  - ".github/workflows/**"
-  - ".github/dependabot.yml"
+  - .github/workflows/**
+  - .github/dependabot.yml
 
 # Dependencies
 dependencies:
-  - "pyproject.toml"
-  - "pixi.lock"
-  - ".pre-commit-config.yaml"
+  - pyproject.toml
+  - pixi.lock
+  - .pre-commit-config.yaml
 
 # Security related
 security:
-  - "SECURITY.md"
-  - ".github/ISSUE_TEMPLATE/security_report.yml"
-  - "bandit-report.json"
-  - "safety-report.json"
+  - SECURITY.md
+  - .github/ISSUE_TEMPLATE/security_report.yml
+  - bandit-report.json
+  - safety-report.json
