@@ -14,6 +14,7 @@ authors = [
 requires-python = ">=3.9"
 dependencies = [
     "pyyaml",
+    "toml",
     "tomli; python_version < '3.11'",
     "types-PyYAML",  # Type stubs for PyYAML
     "types-toml",    # Type stubs for toml
