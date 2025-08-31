@@ -89,7 +89,7 @@ repos:
     rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
-        types_or: [yaml, json, markdown]
+        files: \.(yaml|yml|json|md)$
         args: [--write]
 
   # GitHub Actions workflow linting
