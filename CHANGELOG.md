@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.6] - 2025-08-31
+
+### ⚙️ Miscellaneous Tasks
+
+- Update pyproject.toml, pixi.lock, and .actrc for CI and act compatibility
+- Remove rattler-build workflow now that it is a part of the CI workflow
+
+### ⭐ Features
+
+- **ci**: Add rattler-build workflow and update recipe for CI compatibility
+- **ci**: Add rattler-build job to CI workflow for package building
+- **ci**: Update rattler-build job to support multiple OS environments
+- **ci**: Enhance rattler-build job to support OS-specific recipe updates
+
+### 🐛 Bug Fixes
+
+- **ci**: Streamline recipe.yaml update step for cross-platform compatibility
+- **ci**: Correct syntax for updating recipe.yaml in rattler-build job
+- **ci**: Correct syntax for updating context version in recipe.yaml
+- **ci**: Add debug output for recipe.yaml after context version update
+- **ci**: Add build step to rattler-build job for package compilation
+- **ci**: Update fetch options in rattler-build job
+- **dependencies**: Update virtualenv version to >=20.26.6 to address PVE-2024-73456
+
 ## [0.10.5] - 2025-08-31
 
 ### 🐛 Bug Fixes
