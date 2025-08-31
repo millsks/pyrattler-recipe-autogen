@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.3] - 2025-08-31
+
+### ⚙️ Miscellaneous Tasks
+
+- Comment out Test PyPI publishing steps in workflow
+
+### ⭐ Features
+
+- Add .secrets to .gitignore for nektos/act
+- Add act and pixi-diff-to-markdown dependencies and commands
+- Add .actrc and ACT_USAGE.md for local GitHub Actions testing setup
+- Add workflow_dispatch trigger to CI workflow
+
+### 🐛 Bug Fixes
+
+- Specify safety and marshmallow version constraints in pyproject.toml
+- Change token for pull request creation
+- Fix command for generating markdown diff
+- Remove unnecessary quotes in labeler.yml file paths
+- Update labeler configuration to use changed-files syntax
+- Correct 'file' to 'files' in Codecov action configuration
+
+### 🚜 Refactor
+
+- Reorder build and check package steps in release workflow
+
+## [0.10.2] - 2025-08-30
+
+### ⭐ Features
+
+- Add workflow to update Pixi lockfiles
+
 ## [0.10.1] - 2025-08-30
 
 ### 🐛 Bug Fixes
