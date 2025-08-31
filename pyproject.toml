@@ -167,6 +167,8 @@ safety = "*"
 bandit = "*"
 git-cliff = "*"
 rattler-build = "*"
+act = "*"
+pixi-diff-to-markdown = "*"
 
 [tool.pixi.feature.test.dependencies]
 pytest = "*"
@@ -233,6 +235,26 @@ changelog = "git-cliff --output CHANGELOG.md"
 changelog-unreleased = "git-cliff --unreleased --tag unreleased --output -"
 changelog-latest = "git-cliff --latest --output -"
 release-preview = "git-cliff --bump --unreleased --output -"
+pixi-lock-update-diff = "pixi update --json | pixi exec pixi-diff-to-markdown > pixi-lock-update-diff.md"
+
+# GitHub Actions local testing with act
+act = "act"
+act-list = "act -l"
+act-release = "act workflow_dispatch -W .github/workflows/release.yml"
+act-publish = "act release -W .github/workflows/publish.yml"
+act-maintenance = "act schedule -W .github/workflows/maintenance.yml"
+act-dryrun = "act --dryrun"
+act-release-test = "act workflow_dispatch -W .github/workflows/release.yml --input version=0.99.0 --input test_mode=true"
+act-setup = "echo 'Creating .actrc and .secrets files for act configuration...' && echo '-P ubuntu-latest=catthehacker/ubuntu:act-latest' > .actrc && echo '--secret-file .secrets' >> .actrc && echo 'GITHUB_TOKEN=dummy' > .secrets && echo 'RELEASE_PAT=dummy' >> .secrets && echo 'TEST_PYPI_API_TOKEN=dummy' >> .secrets && echo 'PYPI_API_TOKEN=dummy' >> .secrets && echo '✅ Act setup complete! Edit .secrets with real tokens if needed.'"
+
+[tool.pixi-diff-to-markdown]
+merge-dependencies = "split-explicit" # or "split-explicit" when there are three or more environments / platforms
+hide-tables = "auto"
+max-expanded-rows = 25
+change-type-column = true
+explicit-column = false
+package-type-column = false
+create-links-for-packages = true
 
 # git-cliff configuration for changelog generation
 [tool.git-cliff.changelog]
