@@ -44,7 +44,7 @@ jobs:
         if: steps.changes.outputs.has-changes == 'true'
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RELEASE_TOKEN }}
           commit-message: "chore(deps): update dependencies and pre-commit hooks"
           title: "chore(deps): automated dependency updates"
           body: |
