@@ -184,7 +184,7 @@ jobs:
       - name: Update recipe.yaml for local build
         shell: bash
         run: |
-          pixi run yq ".context.version = strenv(\"$(pixi run hatch version)\") | .source.path = \"..\" | del(.source.url) | del(.source.sha256)" -i recipe/recipe.yaml
+          pixi run yq -y ".context.version = \"$(pixi run hatch version)\" | .source.path = \"..\" | del(.source.url) | del(.source.sha256)" -i recipe/recipe.yaml
 
       - name: Run rattler-build-action
         uses: prefix-dev/rattler-build-action@v0.2.34
