@@ -1,0 +1,42 @@
+name: Rattler Build Matrix
+
+on:
+  workflow_dispatch:
+
+jobs:
+  rattler-build:
+    name: Rattler Build (${{ matrix.platform }})
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      matrix:
+        platform:
+          - ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: Install Pixi
+        uses: prefix-dev/setup-pixi@v0.8.14
+
+      - name: Create Pixi environment
+        run: pixi install
+
+      - name: Download conda-forge global pinnings
+        run: curl -L https://raw.githubusercontent.com/conda-forge/conda-forge-pinning-feedstock/main/recipe/conda_build_config.yaml -o conda_build_config.yaml
+      - name: Update recipe.yaml for local build
+        run: |
+            VERSION=$(pixi run hatch version)
+            export VERSION
+            yq e '.context.version = strenv(VERSION) | .source.path = ".." | del(.source.url) | del(.source.sha256)' -i recipe/recipe.yaml
+
+      - name: Run rattler-build-action
+        uses: prefix-dev/rattler-build-action@v0.2.34
+        with:
+          recipe-path: recipe/recipe.yaml
+          build-args: --output-dir dist/conda --variant-config conda_build_config.yaml
+          upload-artifact: false
