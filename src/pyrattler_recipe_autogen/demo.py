@@ -13,12 +13,20 @@ Usage:
     run_demo()
 """
 
+import importlib.util
 import tempfile
 import textwrap
 from pathlib import Path
 from typing import Any, Optional
 
-import toml  # For writing TOML files
+if importlib.util.find_spec("tomllib") is not None:
+    import tomllib
+    # safe to use tomllib.load(...)
+else:
+    import tomli as tomllib  # fallback for older Python  # noqa: F401
+
+# Always use toml for writing
+import toml
 import yaml
 
 from .core import assemble_recipe, load_pyproject_toml

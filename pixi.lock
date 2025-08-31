@@ -3304,8 +3304,8 @@ packages:
   timestamp: 1733710122949
 - pypi: ./
   name: pyrattler-recipe-autogen
-  version: 0.1.dev1
-  sha256: bef66161f55af689e20c96ccee1ddc61b061075d04f7c0243cbd08d9db42cca5
+  version: 0.10.4.dev8
+  sha256: 97dcbf83d9e6585b1ead172a2c8cb0c84ba3858e19b634b8ed835341b4653e81
   requires_dist:
   - pyyaml
   - toml

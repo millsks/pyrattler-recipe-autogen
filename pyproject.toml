@@ -14,8 +14,8 @@ authors = [
 requires-python = ">=3.9"
 dependencies = [
     "pyyaml",
+    "toml",
     "tomli; python_version < '3.11'",
-    "toml",  # For writing TOML in demo module
     "types-PyYAML",  # Type stubs for PyYAML
     "types-toml",    # Type stubs for toml
 ]
@@ -173,6 +173,10 @@ pixi-diff-to-markdown = "*"
 [tool.pixi.feature.test.dependencies]
 pytest = "*"
 pytest-cov = "*"
+types-toml = ">=0.10.8.20240310,<0.11"
+toml = "*"
+tomli = "*"
+pyyaml = "*"
 
 [tool.pixi.feature.lint.dependencies]
 ruff = "*"
@@ -205,7 +209,7 @@ version = "python -c 'import pyrattler_recipe_autogen; print(pyrattler_recipe_au
 # Building
 clean = "python -c 'import shutil, pathlib; [shutil.rmtree(p, ignore_errors=True) for p in [pathlib.Path(\"build\"), pathlib.Path(\"dist\")] + list(pathlib.Path(\".\").glob(\"*.egg-info\"))]'"
 build = { cmd = "python -m build", depends-on = ["clean"] }
-build-conda-rattler = "rattler-build build --experimental --recipe recipe --output-dir dist/conda"
+build-conda = "rattler-build build --experimental --recipe recipe --output-dir dist/conda"
 
 # Pre-commit
 pre-commit-install = "pre-commit install && pre-commit install --hook-type commit-msg"
@@ -216,6 +220,9 @@ dev-setup = { depends-on = ["pre-commit-install"] }
 
 [tool.pixi.dependencies]
 types-toml = ">=0.10.8.20240310,<0.11"
+toml = "*"
+tomli = "*"
+pyyaml = "*"
 
 [tool.pixi.feature.test.tasks]
 test = "pytest tests/"

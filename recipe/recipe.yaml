@@ -3,41 +3,54 @@ schema_version: 1
 
 context:
   name: pyrattler-recipe-autogen
-  version: "0.1.2"
+  version: ${{ env.get("HATCH_VERSION", default="0.0.0+local") }}
+  #version: '0.10.3'
 
 package:
   name: ${{ name }}
   version: ${{ version }}
 
 source:
-  url: https://pypi.org/packages/source/${{ name[0] }}/${{ name }}/pyrattler_recipe_autogen-${{ version }}.tar.gz
-  sha256: 77dee2ddf6d6840112a397b4f90477fe2e62b7a9e61b865093edb833b9b5570b
+  path: ..
+  # url: https://pypi.org/packages/source/${{ name[0] }}/${{ name }}/pyrattler_recipe_autogen-${{ version }}.tar.gz
+  # sha256: 0555b815454b329cbd0efbb545426461f65581af9a056082127f576662e0f126
 
 build:
-  script: $PYTHON -m pip install . -vv --no-build-isolation
   number: 0
+  noarch: python
+  script: ${{ PYTHON }} -m pip install . -vv --no-build-isolation
+  python:
+    entry_points:
+      - pyrattler-recipe-autogen = pyrattler_recipe_autogen.cli:main
 
 requirements:
   host:
-    - python>=3.9,<4.0
-    - pip
-    - python-build
-    - hatchling
-    - hatch-vcs
+  - python 3.9.*
+  - pip
+  - python-build
+  - hatchling
+  - hatch-vcs
   run:
-    - python >=3.9
-    - pyyaml
-    - if: python_version < "3.11"
-      then:
-        - tomli
-    - types-PyYAML
+  - python >=3.9,<4
+  - pyyaml
+  - toml
+  - if: python <3.11
+    then:
+      - tomli
+      - types-toml
+      - types-PyYAML
 
 tests:
   - python:
       imports:
         - pyrattler_recipe_autogen
       pip_check: true
-  - script:
+      python_version: 3.9.*
+  - requirements:
+      run:
+        - python 3.9.*
+        - toml
+    script:
       - pyrattler-recipe-autogen --help
 
 about:
