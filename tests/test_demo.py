@@ -2,8 +2,12 @@
 Tests for the demo module.
 """
 
+import sys
+from pathlib import Path
+
 import pytest
 
+from pyrattler_recipe_autogen import demo
 from pyrattler_recipe_autogen.demo import (
     create_demo_pyproject,
     demo_scientific_package,
@@ -11,6 +15,13 @@ from pyrattler_recipe_autogen.demo import (
     demo_webapp_package,
     generate_recipe_from_data,
 )
+
+
+def test_main_error(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["demo.py", "--type", "unknown"])
+    with pytest.raises(SystemExit) as excinfo:
+        demo.main()
+    assert excinfo.value.code == 2
 
 
 def test_create_demo_pyproject_simple():
@@ -105,3 +116,54 @@ def test_demo_functions_return_valid_yaml(demo_type):
     assert isinstance(parsed, dict)
     assert "package" in parsed
     assert "name" in parsed["package"]
+
+
+def test_print_demo_header(capsys):
+    from pyrattler_recipe_autogen.demo import print_demo_header
+
+    print_demo_header("Test Header")
+    out = capsys.readouterr().out
+    assert "Test Header" in out
+
+
+def test_print_recipe_preview_short(capsys):
+    from pyrattler_recipe_autogen.demo import print_recipe_preview
+
+    recipe = "line1\nline2"
+    print_recipe_preview(recipe, max_lines=10)
+    out = capsys.readouterr().out
+    assert "line1" in out and "line2" in out
+
+
+def test_print_recipe_preview_long(capsys):
+    from pyrattler_recipe_autogen.demo import print_recipe_preview
+
+    recipe = "\n".join([f"line{i}" for i in range(50)])
+    print_recipe_preview(recipe, max_lines=5)
+    out = capsys.readouterr().out
+    assert "showing first 5 lines" in out
+
+
+def test_run_demo_full(monkeypatch, capsys):
+    from pyrattler_recipe_autogen import demo
+
+    monkeypatch.setattr("sys.argv", ["demo.py", "--type", "all", "--full"])
+    demo.main()
+    out = capsys.readouterr().out
+    assert "Demo complete" in out
+
+
+def test_run_demo_current(monkeypatch, capsys, tmp_path):
+    from pyrattler_recipe_autogen import demo
+
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text("""
+    [project]
+    name = "test-demo"
+    version = "0.1.0"
+    """)
+    monkeypatch.setattr(Path, "cwd", lambda: tmp_path)
+    monkeypatch.setattr("sys.argv", ["demo.py", "--type", "current"])
+    demo.main()
+    out = capsys.readouterr().out
+    assert "test-demo" in out

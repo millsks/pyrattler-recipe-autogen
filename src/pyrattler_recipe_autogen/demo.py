@@ -23,7 +23,7 @@ if importlib.util.find_spec("tomllib") is not None:
     import tomllib
     # safe to use tomllib.load(...)
 else:
-    import tomli as tomllib  # fallback for older Python.   # noqa: F401
+    import tomli as tomllib  # fallback for older Python  # noqa: F401
 
 # Always use toml for writing
 import toml
