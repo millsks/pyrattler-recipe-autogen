@@ -178,6 +178,9 @@ jobs:
       - name: Create Pixi environment
         run: pixi install
 
+      - name: Build package
+        run: pixi run build
+
       - name: Download conda-forge global pinnings
         run: curl -L https://raw.githubusercontent.com/conda-forge/conda-forge-pinning-feedstock/main/recipe/conda_build_config.yaml -o conda_build_config.yaml
 
