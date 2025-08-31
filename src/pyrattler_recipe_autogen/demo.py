@@ -13,12 +13,18 @@ Usage:
     run_demo()
 """
 
+import importlib.util
 import tempfile
 import textwrap
 from pathlib import Path
 from typing import Any, Optional
 
-import toml  # For writing TOML files
+if importlib.util.find_spec("tomllib") is not None:
+    import tomllib
+    # safe to use tomllib.load(...)
+else:
+    import tomli as tomllib  # fallback for older Python
+
 import yaml
 
 from .core import assemble_recipe, load_pyproject_toml
@@ -159,7 +165,7 @@ def generate_recipe_from_data(pyproject_data: dict[str, Any]) -> str:
     try:
         # Write the TOML data to temporary file
         with open(temp_path, "w") as f:
-            toml.dump(pyproject_data, f)
+            tomllib.dump(pyproject_data, f)
 
         # Load the TOML data and generate recipe
         toml_data = load_pyproject_toml(temp_path)

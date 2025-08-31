@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import pathlib
 import re
@@ -18,10 +19,11 @@ import typing as _t
 from dataclasses import dataclass, field
 from typing import Union
 
-try:
-    import tomllib  # Python ≥3.11
-except ModuleNotFoundError:  # pragma: no cover
-    import tomli as tomllib
+if importlib.util.find_spec("tomllib") is not None:
+    import tomllib
+    # safe to use tomllib.load(...)
+else:
+    import tomli as tomllib  # fallback for older Python
 
 # Note: setuptools_scm import handled locally in resolve_dynamic_version()
 
