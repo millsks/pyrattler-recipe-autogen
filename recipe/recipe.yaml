@@ -3,7 +3,7 @@ schema_version: 1
 
 context:
   name: pyrattler-recipe-autogen
-  version: "0.1.2"
+  version: '0.10.3'
 
 package:
   name: ${{ name }}
@@ -14,30 +14,36 @@ source:
   sha256: 77dee2ddf6d6840112a397b4f90477fe2e62b7a9e61b865093edb833b9b5570b
 
 build:
-  script: $PYTHON -m pip install . -vv --no-build-isolation
   number: 0
+  noarch: python
+  script: ${{ PYTHON }} -m pip install . -vv --no-build-isolation
+  python:
+    entry_points:
+      - pyrattler-recipe-autogen = pyrattler_recipe_autogen.cli:main
 
 requirements:
   host:
-    - python>=3.9,<4.0
-    - pip
-    - python-build
-    - hatchling
-    - hatch-vcs
+  - python ${{ python_min }}.*
+  - pip
+  - python-build
+  - hatchling
+  - hatch-vcs
   run:
-    - python >=3.9
-    - pyyaml
-    - if: python_version < "3.11"
-      then:
-        - tomli
-    - types-PyYAML
+  - python >=${{ python_min }},<4
+  - pyyaml
+  - tomli
+  - types-PyYAML
 
 tests:
   - python:
       imports:
         - pyrattler_recipe_autogen
       pip_check: true
-  - script:
+      python_version: ${{ python_min }}.*
+  - requirements:
+      run:
+        - python ${{ python_min }}.*
+    script:
       - pyrattler-recipe-autogen --help
 
 about:
