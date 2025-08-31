@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.4] - 2025-08-31
+
+### 🐛 Bug Fixes
+
+- Update prettier hook to use 'files' instead of 'types_or' for better file matching
+- Update version to 0.10.3 and refine requirements in recipe.yaml
+- Update recipe.yaml to use dynamic versioning and refine requirements
+- Update TOML handling for compatibility with Python 3.11 and remove deprecated dependencies
+- Update demo.py to use 'toml' for writing and adjust requirements in recipe.yaml
+- Update build command in pyproject.toml to simplify packaging process
+- Add 'toml' as a dependency
+- Remove sensitive information from publish.yml
+- Update version and sha256 in pixi.lock; add toml dependencies in pyproject.toml; enhance demo tests in test_demo.py
+
 ## [0.10.3] - 2025-08-31
 
 ### ⚙️ Miscellaneous Tasks
