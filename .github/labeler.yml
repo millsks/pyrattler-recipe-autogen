@@ -2,20 +2,20 @@
 # See https://github.com/actions/labeler
 
 # Source code changes
-"area/core":
+area/core:
   - "src/pyrattler_recipe_autogen/core.py"
   - "src/pyrattler_recipe_autogen/core/**"
 
-"area/cli":
+area/cli:
   - "src/pyrattler_recipe_autogen/cli.py"
   - "src/pyrattler_recipe_autogen/cli/**"
 
 # Test changes
-"area/tests":
+area/tests:
   - "tests/**"
 
 # Documentation changes
-"area/docs":
+area/docs:
   - "*.md"
   - "docs/**"
   - ".github/ISSUE_TEMPLATE/**"
@@ -23,25 +23,25 @@
   - ".github/copilot-instructions.md"
 
 # Configuration changes
-"area/config":
+area/config:
   - "pyproject.toml"
   - ".pre-commit-config.yaml"
   - ".gitignore"
   - "pixi.lock"
 
 # CI/CD changes
-"area/ci":
+area/ci:
   - ".github/workflows/**"
   - ".github/dependabot.yml"
 
 # Dependencies
-"dependencies":
+dependencies:
   - "pyproject.toml"
   - "pixi.lock"
   - ".pre-commit-config.yaml"
 
 # Security related
-"security":
+security:
   - "SECURITY.md"
   - ".github/ISSUE_TEMPLATE/security_report.yml"
   - "bandit-report.json"
