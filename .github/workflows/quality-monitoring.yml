@@ -45,15 +45,31 @@ jobs:
         run: |
           python << 'EOF'
           import json
-          with open('complexity-report.json') as f, open('complexity-report.html', 'w') as out:
-              data = json.load(f)
+          import os
+          report_path = 'complexity-report.json'
+          html_path = 'complexity-report.html'
+          def write_unavailable(out):
               out.write('<html><body><h1>Complexity Report</h1>\n')
-              for file, items in data.items():
-                  out.write(f'<h2>{file}</h2>\n<ul>\n')
-                  for item in items:
-                      out.write(f"<li>{item['name']}: complexity {item['complexity']}</li>\n")
-                  out.write('</ul>\n')
+              out.write('<p>Complexity report is unavailable.</p>\n')
               out.write('</body></html>')
+          if not os.path.exists(report_path) or os.path.getsize(report_path) == 0:
+              with open(html_path, 'w') as out:
+                  write_unavailable(out)
+          else:
+              try:
+                  with open(report_path) as f:
+                      data = json.load(f)
+                  with open(html_path, 'w') as out:
+                      out.write('<html><body><h1>Complexity Report</h1>\n')
+                      for file, items in data.items():
+                          out.write(f'<h2>{file}</h2>\n<ul>\n')
+                          for item in items:
+                              out.write(f"<li>{item['name']}: complexity {item['complexity']}</li>\n")
+                          out.write('</ul>\n')
+                      out.write('</body></html>')
+              except Exception as e:
+                  with open(html_path, 'w') as out:
+                      write_unavailable(out)
           EOF
 
       - name: Convert maintainability report to HTML
