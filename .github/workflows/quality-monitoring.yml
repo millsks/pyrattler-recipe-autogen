@@ -32,6 +32,7 @@ jobs:
         run: |
           pixi run test-cov
           pixi run -e default -- coverage json --pretty-print
+          pixi run -e default -- coverage html
 
       - name: Generate complexity report
         run: |
@@ -40,9 +41,42 @@ jobs:
           radon cc src/ --json > complexity-report.json || true
           radon mi src/ --json > maintainability-report.json || true
 
+      - name: Convert complexity report to HTML
+        run: |
+          python << 'EOF'
+          import json
+          with open('complexity-report.json') as f, open('complexity-report.html', 'w') as out:
+              data = json.load(f)
+              out.write('<html><body><h1>Complexity Report</h1>\n')
+              for file, items in data.items():
+                  out.write(f'<h2>{file}</h2>\n<ul>\n')
+                  for item in items:
+                      out.write(f"<li>{item['name']}: complexity {item['complexity']}</li>\n")
+                  out.write('</ul>\n')
+              out.write('</body></html>')
+          EOF
+
+      - name: Convert maintainability report to HTML
+        run: |
+          python << 'EOF'
+          import json
+          with open('maintainability-report.json') as f, open('maintainability-report.html', 'w') as out:
+              data = json.load(f)
+              out.write('<html><body><h1>Maintainability Report</h1>\n')
+              for file, items in data.items():
+                  out.write(f'<h2>{file}</h2>\n<ul>\n')
+                  for item in items:
+                      out.write(
+                          f"<li>{item['name']}: MI {item['mi']}, rank {item['rank']}</li>\n"
+                      )
+                  out.write('</ul>\n')
+              out.write('</body></html>')
+          EOF
+
       - name: Generate security report
         run: |
           pixi run -e default -- bandit -r src/ -f json -o security-report.json || true
+          pixi run -e default -- bandit -r src/ -f html -o security-report.html || true
 
       - name: Check code quality thresholds
         run: |
@@ -115,4 +149,8 @@ jobs:
             complexity-report.json
             maintainability-report.json
             security-report.json
+            htmlcov/
+            complexity-report.html
+            maintainability-report.html
+            security-report.html
           retention-days: 30
