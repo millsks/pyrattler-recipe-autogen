@@ -49,7 +49,12 @@ jobs:
           report_path = 'complexity-report.json'
           html_path = 'complexity-report.html'
           def write_unavailable(out):
-              out.write('<html><body><h1>Complexity Report</h1>\n')
+              out.write('<!DOCTYPE html>\n')
+              out.write('<html lang="en">\n<head>\n')
+              out.write('<meta charset="UTF-8">\n')
+              out.write('<meta name="viewport" content="width=device-width, initial-scale=1.0">\n')
+              out.write('<title>Complexity Report</title>\n')
+              out.write('</head><body><h1>Complexity Report</h1>\n')
               out.write('<p>Complexity report is unavailable.</p>\n')
               out.write('</body></html>')
           if not os.path.exists(report_path) or os.path.getsize(report_path) == 0:
@@ -60,7 +65,12 @@ jobs:
                   with open(report_path) as f:
                       data = json.load(f)
                   with open(html_path, 'w') as out:
-                      out.write('<html><body><h1>Complexity Report</h1>\n')
+                      out.write('<!DOCTYPE html>\n')
+                      out.write('<html lang="en">\n<head>\n')
+                      out.write('<meta charset="UTF-8">\n')
+                      out.write('<meta name="viewport" content="width=device-width, initial-scale=1.0">\n')
+                      out.write('<title>Complexity Report</title>\n')
+                      out.write('</head><body><h1>Complexity Report</h1>\n')
                       for file, items in data.items():
                           out.write(f'<h2>{file}</h2>\n<ul>\n')
                           for item in items:
@@ -81,14 +91,24 @@ jobs:
           html_path = 'maintainability-report.html'
           with open(html_path, 'w') as out:
               if not os.path.exists(report_path) or os.path.getsize(report_path) == 0:
-                  out.write('<html><body><h1>Maintainability Report</h1>\n')
+                  out.write('<!DOCTYPE html>\n')
+                  out.write('<html lang="en">\n<head>\n')
+                  out.write('<meta charset="UTF-8">\n')
+                  out.write('<meta name="viewport" content="width=device-width, initial-scale=1.0">\n')
+                  out.write('<title>Maintainability Report</title>\n')
+                  out.write('</head><body><h1>Maintainability Report</h1>\n')
                   out.write('<p>No maintainability report available.</p>\n')
                   out.write('</body></html>')
               else:
                   try:
                       with open(report_path) as f:
                           data = json.load(f)
-                      out.write('<html><body><h1>Maintainability Report</h1>\n')
+                      out.write('<!DOCTYPE html>\n')
+                      out.write('<html lang="en">\n<head>\n')
+                      out.write('<meta charset="UTF-8">\n')
+                      out.write('<meta name="viewport" content="width=device-width, initial-scale=1.0">\n')
+                      out.write('<title>Maintainability Report</title>\n')
+                      out.write('</head><body><h1>Maintainability Report</h1>\n')
                       for file, items in data.items():
                           out.write(f'<h2>{file}</h2>\n<ul>\n')
                           for item in items:
@@ -98,7 +118,12 @@ jobs:
                           out.write('</ul>\n')
                       out.write('</body></html>')
                   except (json.JSONDecodeError, Exception):
-                      out.write('<html><body><h1>Maintainability Report</h1>\n')
+                      out.write('<!DOCTYPE html>\n')
+                      out.write('<html lang="en">\n<head>\n')
+                      out.write('<meta charset="UTF-8">\n')
+                      out.write('<meta name="viewport" content="width=device-width, initial-scale=1.0">\n')
+                      out.write('<title>Maintainability Report</title>\n')
+                      out.write('</head><body><h1>Maintainability Report</h1>\n')
                       out.write('<p>Maintainability report is invalid or could not be parsed.</p>\n')
                       out.write('</body></html>')
           EOF
