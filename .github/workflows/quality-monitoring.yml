@@ -32,6 +32,7 @@ jobs:
         run: |
           pixi run test-cov
           pixi run -e default -- coverage json --pretty-print
+          pixi run -e default -- coverage html
 
       - name: Generate complexity report
         run: |
@@ -40,9 +41,97 @@ jobs:
           radon cc src/ --json > complexity-report.json || true
           radon mi src/ --json > maintainability-report.json || true
 
+      - name: Convert complexity report to HTML
+        run: |
+          python << 'EOF'
+          import json
+          import os
+          report_path = 'complexity-report.json'
+          html_path = 'complexity-report.html'
+          def write_unavailable(out):
+              out.write('<!DOCTYPE html>\n')
+              out.write('<html lang="en">\n<head>\n')
+              out.write('<meta charset="UTF-8">\n')
+              out.write('<meta name="viewport" content="width=device-width, initial-scale=1.0">\n')
+              out.write('<title>Complexity Report</title>\n')
+              out.write('</head><body><h1>Complexity Report</h1>\n')
+              out.write('<p>Complexity report is unavailable.</p>\n')
+              out.write('</body></html>')
+          if not os.path.exists(report_path) or os.path.getsize(report_path) == 0:
+              with open(html_path, 'w') as out:
+                  write_unavailable(out)
+          else:
+              try:
+                  with open(report_path) as f:
+                      data = json.load(f)
+                  with open(html_path, 'w') as out:
+                      out.write('<!DOCTYPE html>\n')
+                      out.write('<html lang="en">\n<head>\n')
+                      out.write('<meta charset="UTF-8">\n')
+                      out.write('<meta name="viewport" content="width=device-width, initial-scale=1.0">\n')
+                      out.write('<title>Complexity Report</title>\n')
+                      out.write('</head><body><h1>Complexity Report</h1>\n')
+                      for file, items in data.items():
+                          out.write(f'<h2>{file}</h2>\n<ul>\n')
+                          for item in items:
+                              out.write(f"<li>{item['name']}: complexity {item['complexity']}</li>\n")
+                          out.write('</ul>\n')
+                      out.write('</body></html>')
+              except Exception as e:
+                  with open(html_path, 'w') as out:
+                      write_unavailable(out)
+          EOF
+
+      - name: Convert maintainability report to HTML
+        run: |
+          python << 'EOF'
+          import json
+          import os
+          report_path = 'maintainability-report.json'
+          html_path = 'maintainability-report.html'
+          with open(html_path, 'w') as out:
+              if not os.path.exists(report_path) or os.path.getsize(report_path) == 0:
+                  out.write('<!DOCTYPE html>\n')
+                  out.write('<html lang="en">\n<head>\n')
+                  out.write('<meta charset="UTF-8">\n')
+                  out.write('<meta name="viewport" content="width=device-width, initial-scale=1.0">\n')
+                  out.write('<title>Maintainability Report</title>\n')
+                  out.write('</head><body><h1>Maintainability Report</h1>\n')
+                  out.write('<p>No maintainability report available.</p>\n')
+                  out.write('</body></html>')
+              else:
+                  try:
+                      with open(report_path) as f:
+                          data = json.load(f)
+                      out.write('<!DOCTYPE html>\n')
+                      out.write('<html lang="en">\n<head>\n')
+                      out.write('<meta charset="UTF-8">\n')
+                      out.write('<meta name="viewport" content="width=device-width, initial-scale=1.0">\n')
+                      out.write('<title>Maintainability Report</title>\n')
+                      out.write('</head><body><h1>Maintainability Report</h1>\n')
+                      for file, items in data.items():
+                          out.write(f'<h2>{file}</h2>\n<ul>\n')
+                          for item in items:
+                              out.write(
+                                  f"<li>{item['name']}: MI {item['mi']}, rank {item['rank']}</li>\n"
+                              )
+                          out.write('</ul>\n')
+                      out.write('</body></html>')
+                  except (json.JSONDecodeError, Exception):
+                      out.write('<!DOCTYPE html>\n')
+                      out.write('<html lang="en">\n<head>\n')
+                      out.write('<meta charset="UTF-8">\n')
+                      out.write('<meta name="viewport" content="width=device-width, initial-scale=1.0">\n')
+                      out.write('<title>Maintainability Report</title>\n')
+                      out.write('</head><body><h1>Maintainability Report</h1>\n')
+                      out.write('<p>Maintainability report is invalid or could not be parsed.</p>\n')
+                      out.write('</body></html>')
+          EOF
+
       - name: Generate security report
         run: |
           pixi run -e default -- bandit -r src/ -f json -o security-report.json || true
+          pixi run -e default -- bandit -r src/ -f html -o security-report.html || true
 
       - name: Check code quality thresholds
         run: |
@@ -98,7 +187,7 @@ jobs:
         if: hashFiles('quality-issues.txt') != ''
         uses: peter-evans/create-issue-from-file@v5
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RELEASE_PAT }}
           title: "Code Quality Report - Issues Detected"
           content-filepath: quality-issues.txt
           labels: |
@@ -115,4 +204,8 @@ jobs:
             complexity-report.json
             maintainability-report.json
             security-report.json
+            htmlcov/
+            complexity-report.html
+            maintainability-report.html
+            security-report.html
           retention-days: 30
