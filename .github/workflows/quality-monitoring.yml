@@ -187,7 +187,7 @@ jobs:
         if: hashFiles('quality-issues.txt') != ''
         uses: peter-evans/create-issue-from-file@v5
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RELEASE_PAT }}
           title: "Code Quality Report - Issues Detected"
           content-filepath: quality-issues.txt
           labels: |

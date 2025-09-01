@@ -250,15 +250,16 @@ release-preview = "git-cliff --bump --unreleased --output -"
 pixi-lock-update-diff = "pixi update --json | pixi exec pixi-diff-to-markdown > pixi-lock-update-diff.md"
 
 # GitHub Actions local testing with act
+act-setup = "echo 'Updating .actrc and .secrets files for act configuration...' && touch .actrc .secrets && grep -qxF -- '--container-architecture linux/amd64' .actrc || echo '--container-architecture linux/amd64' >> .actrc && grep -qxF -- '--secret-file .secrets' .actrc || echo '--secret-file .secrets' >> .actrc && grep -qxF -- '-P ubuntu-latest=catthehacker/ubuntu:act-latest' .actrc || echo '-P ubuntu-latest=catthehacker/ubuntu:act-latest' >> .actrc && grep -qxF 'GITHUB_TOKEN=dummy' .secrets || echo 'GITHUB_TOKEN=dummy' >> .secrets && grep -qxF 'RELEASE_PAT=dummy' .secrets || echo 'RELEASE_PAT=dummy' >> .secrets && grep -qxF 'TEST_PYPI_API_TOKEN=dummy' .secrets || echo 'TEST_PYPI_API_TOKEN=dummy' >> .secrets && grep -qxF 'PYPI_API_TOKEN=dummy' .secrets || echo 'PYPI_API_TOKEN=dummy' >> .secrets && echo '✅ Act setup complete! Edit .secrets with real tokens if needed.'"
 act = "act"
 act-list = "act -l"
+act-dryrun = "act --dryrun"
 act-release = "act workflow_dispatch -W .github/workflows/release.yml"
 act-publish = "act release -W .github/workflows/publish.yml"
 act-maintenance = "act schedule -W .github/workflows/maintenance.yml"
-act-dryrun = "act --dryrun"
+act-quality-monitoring = "act schedule -W .github/workflows/quality-monitoring.yml"
 act-release-test = "act workflow_dispatch -W .github/workflows/release.yml --input version=0.99.0 --input test_mode=true"
 act-rattler-build = "act workflow_dispatch -W .github/workflows/rattler-build.yml"
-act-setup = "echo 'Updating .actrc and .secrets files for act configuration...' && touch .actrc .secrets && grep -qxF -- '--container-architecture linux/amd64' .actrc || echo '--container-architecture linux/amd64' >> .actrc && grep -qxF -- '--secret-file .secrets' .actrc || echo '--secret-file .secrets' >> .actrc && grep -qxF -- '-P ubuntu-latest=catthehacker/ubuntu:act-latest' .actrc || echo '-P ubuntu-latest=catthehacker/ubuntu:act-latest' >> .actrc && grep -qxF 'GITHUB_TOKEN=dummy' .secrets || echo 'GITHUB_TOKEN=dummy' >> .secrets && grep -qxF 'RELEASE_PAT=dummy' .secrets || echo 'RELEASE_PAT=dummy' >> .secrets && grep -qxF 'TEST_PYPI_API_TOKEN=dummy' .secrets || echo 'TEST_PYPI_API_TOKEN=dummy' >> .secrets && grep -qxF 'PYPI_API_TOKEN=dummy' .secrets || echo 'PYPI_API_TOKEN=dummy' >> .secrets && echo '✅ Act setup complete! Edit .secrets with real tokens if needed.'"
 
 [tool.pixi-diff-to-markdown]
 merge-dependencies = "split-explicit" # or "split-explicit" when there are three or more environments / platforms
