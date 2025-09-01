@@ -2,7 +2,7 @@ name: Release
 
 on:
   schedule:
-    - cron: "0 0 7,21 * *" # Every Sunday at midnight
+    - cron: "0 0 7,21 * *" # At midnight on the 7th and 21st day of every month
 
   workflow_dispatch:
     inputs:
