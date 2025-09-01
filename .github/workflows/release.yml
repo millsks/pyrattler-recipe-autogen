@@ -1,6 +1,9 @@
 name: Release
 
 on:
+  schedule:
+    - cron: "0 0 7,21 * *" # Every Sunday at midnight
+
   workflow_dispatch:
     inputs:
       version:
@@ -22,6 +25,9 @@ jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'schedule' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch')
     permissions:
       contents: write
       pull-requests: write
