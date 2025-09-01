@@ -76,17 +76,31 @@ jobs:
         run: |
           python << 'EOF'
           import json
-          with open('maintainability-report.json') as f, open('maintainability-report.html', 'w') as out:
-              data = json.load(f)
-              out.write('<html><body><h1>Maintainability Report</h1>\n')
-              for file, items in data.items():
-                  out.write(f'<h2>{file}</h2>\n<ul>\n')
-                  for item in items:
-                      out.write(
-                          f"<li>{item['name']}: MI {item['mi']}, rank {item['rank']}</li>\n"
-                      )
-                  out.write('</ul>\n')
-              out.write('</body></html>')
+          import os
+          report_path = 'maintainability-report.json'
+          html_path = 'maintainability-report.html'
+          with open(html_path, 'w') as out:
+              if not os.path.exists(report_path) or os.path.getsize(report_path) == 0:
+                  out.write('<html><body><h1>Maintainability Report</h1>\n')
+                  out.write('<p>No maintainability report available.</p>\n')
+                  out.write('</body></html>')
+              else:
+                  try:
+                      with open(report_path) as f:
+                          data = json.load(f)
+                      out.write('<html><body><h1>Maintainability Report</h1>\n')
+                      for file, items in data.items():
+                          out.write(f'<h2>{file}</h2>\n<ul>\n')
+                          for item in items:
+                              out.write(
+                                  f"<li>{item['name']}: MI {item['mi']}, rank {item['rank']}</li>\n"
+                              )
+                          out.write('</ul>\n')
+                      out.write('</body></html>')
+                  except (json.JSONDecodeError, Exception):
+                      out.write('<html><body><h1>Maintainability Report</h1>\n')
+                      out.write('<p>Maintainability report is invalid or could not be parsed.</p>\n')
+                      out.write('</body></html>')
           EOF
 
       - name: Generate security report
