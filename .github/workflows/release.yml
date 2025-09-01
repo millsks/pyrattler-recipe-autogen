@@ -1,6 +1,9 @@
 name: Release
 
 on:
+  schedule:
+    - cron: "0 0 7,21 * *" # At midnight on the 7th and 21st day of every month
+
   workflow_dispatch:
     inputs:
       version:
@@ -22,6 +25,9 @@ jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'schedule' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch')
     permissions:
       contents: write
       pull-requests: write
@@ -31,7 +37,38 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          token: ${{ secrets.RELEASE_PAT }}
+
+      - name: Get latest tag
+        id: get_tag
+        run: |
+          git fetch --tags
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo no_tag_found)
+          echo "tag=" >> "$GITHUB_OUTPUT"
+          if [ "$latest_tag" != "no_tag_found" ]; then
+            echo "has_tags=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_tags=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check for changes since last tag
+        id: check_changes
+        run: |
+          if [ "${{ steps.get_tag.outputs.has_tags }}" == "false" ]; then
+            echo "No previous tags found - proceeding with release"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          elif git diff --quiet ${{ steps.get_tag.outputs.tag }} HEAD; then
+            echo "No changes since last tag ${{ steps.get_tag.outputs.tag }}"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Changes detected since last tag ${{ steps.get_tag.outputs.tag }}"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip release (no changes)
+        if: steps.check_changes.outputs.changed == 'false'
+        run: |
+          echo "::notice::No changes detected since last release. Skipping automated release."
+          exit 0
 
       - name: Setup pixi
         uses: prefix-dev/setup-pixi@v0.9.0
