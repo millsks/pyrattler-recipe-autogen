@@ -33,6 +33,38 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_PAT }}
 
+      - name: Get latest tag
+        id: get_tag
+        run: |
+          git fetch --tags
+          if git describe --tags --abbrev=0 2>/dev/null; then
+            echo "tag=$(git describe --tags --abbrev=0 2>/dev/null)" >> "$GITHUB_OUTPUT"
+            echo "has_tags=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=" >> "$GITHUB_OUTPUT"
+            echo "has_tags=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check for changes since last tag
+        id: check_changes
+        run: |
+          if [ "${{ steps.get_tag.outputs.has_tags }}" == "false" ]; then
+            echo "No previous tags found - proceeding with release"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          elif git diff --quiet ${{ steps.get_tag.outputs.tag }} HEAD; then
+            echo "No changes since last tag ${{ steps.get_tag.outputs.tag }}"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Changes detected since last tag ${{ steps.get_tag.outputs.tag }}"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip release (no changes)
+        if: steps.check_changes.outputs.changed == 'false'
+        run: |
+          echo "::notice::No changes detected since last release. Skipping automated release."
+          exit 0
+
       - name: Setup pixi
         uses: prefix-dev/setup-pixi@v0.9.0
         with:
