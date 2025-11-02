@@ -488,11 +488,10 @@ def _categorize_dependencies(dependencies: list[str]) -> dict[str, _t.Any]:
 
 def _extract_dependency_name(dep: str) -> str:
     """Extract clean dependency name from requirement string."""
-    separators = [">=", "==", "~=", "<", ">", " "]
-    dep_name = dep
-    for sep in separators:
-        dep_name = dep_name.split(sep)[0]
-    return dep_name
+    match = re.match(r"^([a-zA-Z0-9_\-\.]+)", dep.strip())
+    if match:
+        return match.group(1)
+    return dep.strip()
 
 
 def _analyze_optional_dependencies(
