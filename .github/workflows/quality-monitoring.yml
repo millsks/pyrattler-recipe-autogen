@@ -196,7 +196,7 @@ jobs:
             technical-debt
 
       - name: Upload quality reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: quality-reports
           path: |
