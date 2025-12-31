@@ -178,6 +178,8 @@ bandit = "*"
 safety = ">=2.3.5,<3.0"
 marshmallow = ">=3.0,<4.0"
 actionlint = "*"
+brotli-python = ">=1.2.0"  # Fixes CVE-2025-6176
+xmltodict = ">=1.0.0"      # Fixes CVE-2025-9375
 
 [tool.pixi.environments]
 default = { features = ["dev"], solve-group = "default" }
