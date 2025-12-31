@@ -141,20 +141,13 @@ skips = [
     "B607",  # partial executable path - Poetry executable is expected to be in PATH
 ]
 
-[tool.pixi.project]
+[tool.pixi.workspace]
 name = "pyrattler-recipe-autogen"
 channels = ["conda-forge"]
 platforms = ["osx-arm64", "osx-64", "linux-64", "win-64"]
 
 [tool.pixi.pypi-dependencies]
 pyrattler-recipe-autogen = { path = ".", editable = true }
-
-[tool.pixi.host-dependencies]
-python = ">=3.9,<4.0"
-pip = "*"
-python-build = "*"
-hatchling = "*"
-hatch-vcs = "*"
 
 [tool.pixi.feature.dev.dependencies]
 pytest = "*"
@@ -219,6 +212,11 @@ pre-commit-run = "pre-commit run --all-files"
 dev-setup = { depends-on = ["pre-commit-install"] }
 
 [tool.pixi.dependencies]
+python = ">=3.9,<4.0"
+pip = "*"
+python-build = "*"
+hatchling = "*"
+hatch-vcs = "*"
 yq = "*"
 types-toml = ">=0.10.8.20240310,<0.11"
 toml = "*"
