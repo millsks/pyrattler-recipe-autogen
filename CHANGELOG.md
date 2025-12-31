@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.0] - 2025-12-31
+
+### ⚙️ Miscellaneous Tasks
+
+- **deps**: Bump actions/upload-artifact from 4 to 5 (#57)
+- **deps**: Bump prefix-dev/setup-pixi from 0.9.0 to 0.9.3 (#56)
+- **deps**: Bump sonarsource/sonarqube-scan-action from 5.3.0 to 6.0.0 (#48)
+- **deps**: Bump actions/labeler from 5 to 6 (#44)
+- **deps**: Bump actions/stale from 9 to 10 (#42)
+
+### ⭐ Features
+
+- **release**: Enhance release workflow to check for changes since last tag
+- **release**: Add cron schedule for automated releases
+- **quality-monitoring**: Enhance reports by generating HTML outputs for complexity, maintainability, and security
+- **quality-monitoring**: Enhance HTML reports with DOCTYPE and meta tags for complexity and maintainability reports
+
+### 🐛 Bug Fixes
+
+- **release**: Remove unnecessary token parameter from checkout step
+- **release**: Improve tag fetching logic to handle missing tags
+- Update GitHub Actions token for issue creation and bump package version in pixi.lock
+- Resolve pixi.toml deprecation warnings by updating to current field names
+- **deps**: Add brotli-python and xmltodict to address security vulnerabilities (#66)
+
 ## [0.10.6] - 2025-08-31
 
 ### ⚙️ Miscellaneous Tasks
