@@ -27,7 +27,7 @@ jobs:
 
       - name: Label PRs by file changes
         if: github.event_name == 'pull_request'
-        uses: actions/labeler@v5
+        uses: actions/labeler@v6
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
