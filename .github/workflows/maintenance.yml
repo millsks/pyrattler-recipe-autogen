@@ -15,7 +15,7 @@ jobs:
       pull-requests: write
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up Pixi
         uses: prefix-dev/setup-pixi@v0.9.3
@@ -78,7 +78,7 @@ jobs:
       actions: write
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Delete old workflow runs
         uses: Mattraks/delete-workflow-runs@v2
@@ -96,7 +96,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up Pixi
         uses: prefix-dev/setup-pixi@v0.9.3
